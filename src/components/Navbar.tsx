@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Briefcase, Search, Bell, Moon, Sun, Mic, FileEdit, Code2, Map } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 
 export default function Navbar() {
+  const { isAuthenticated } = useAuthStore();
+  const getFeatureLink = (path: string) => (isAuthenticated ? path : '/login');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -61,7 +64,7 @@ export default function Navbar() {
                 Platform Features
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-1 p-2">
-                <Link to="/dashboard/interview" onClick={() => setIsSearchOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/link">
+                <Link to={getFeatureLink("/dashboard/interview")} onClick={() => setIsSearchOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/link">
                   <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center group-hover/link:bg-indigo-500/20 transition-colors shrink-0">
                     <Mic className="w-5 h-5 text-indigo-400" />
                   </div>
@@ -70,7 +73,7 @@ export default function Navbar() {
                     <div className="text-xs text-slate-400 leading-snug whitespace-normal">AI-powered voice interviews</div>
                   </div>
                 </Link>
-                <Link to="/dashboard/test" onClick={() => setIsSearchOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/link">
+                <Link to={getFeatureLink("/dashboard/test")} onClick={() => setIsSearchOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/link">
                   <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center group-hover/link:bg-purple-500/20 transition-colors shrink-0">
                     <FileEdit className="w-5 h-5 text-purple-400" />
                   </div>
@@ -79,7 +82,7 @@ export default function Navbar() {
                     <div className="text-xs text-slate-400 leading-snug whitespace-normal">Comprehensive skill assessments</div>
                   </div>
                 </Link>
-                <Link to="/dashboard/coding" onClick={() => setIsSearchOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/link">
+                <Link to={getFeatureLink("/dashboard/coding")} onClick={() => setIsSearchOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/link">
                   <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover/link:bg-emerald-500/20 transition-colors shrink-0">
                     <Code2 className="w-5 h-5 text-emerald-400" />
                   </div>
@@ -88,7 +91,7 @@ export default function Navbar() {
                     <div className="text-xs text-slate-400 leading-snug whitespace-normal">Interactive coding challenges</div>
                   </div>
                 </Link>
-                <Link to="/dashboard/roadmap" onClick={() => setIsSearchOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/link">
+                <Link to={getFeatureLink("/dashboard/roadmap")} onClick={() => setIsSearchOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/link">
                   <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center group-hover/link:bg-cyan-500/20 transition-colors shrink-0">
                     <Map className="w-5 h-5 text-cyan-400" />
                   </div>

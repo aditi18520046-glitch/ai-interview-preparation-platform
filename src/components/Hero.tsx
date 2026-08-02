@@ -31,7 +31,10 @@ export default function Hero() {
               <ChevronRight className="w-5 h-5" />
             </button>
           </Link>
-          <button className="px-8 py-4 bg-white/5 border border-white/10 font-semibold rounded-full hover:bg-white/10 transition-colors">
+          <button 
+            onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+            className="px-8 py-4 bg-white/5 border border-white/10 font-semibold rounded-full hover:bg-white/10 transition-colors"
+          >
             View Features
           </button>
         </div>
