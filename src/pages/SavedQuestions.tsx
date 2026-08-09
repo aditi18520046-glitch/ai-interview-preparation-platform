@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { 
   Bookmark, Search, Filter, Play, ChevronDown, 
@@ -32,9 +32,13 @@ interface SavedQuestion {
   learningResources: string[];
 }
 
+import { useSavedQuestionStore } from '../store/savedQuestionStore';
 export default function SavedQuestions() {
+  const { savedQuestions, fetchSaved, removeQuestion } = useSavedQuestionStore();
+  useEffect(() => { fetchSaved(); }, [fetchSaved]);
+  
   // Always strictly empty as per instructions
-  const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([]); 
+   
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);

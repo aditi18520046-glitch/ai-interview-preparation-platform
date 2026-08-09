@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 
 interface RoadmapGeneratorProps {
-  onGenerate: () => void;
+  onGenerate: (data?: any) => void;
+  //onGenerate: (data?: any) => void;
 }
 
 const COMPANIES = [
@@ -149,7 +150,13 @@ function StandardDropdown({ label, icon: Icon, options, value, onChange, placeho
   );
 }
 
+import { useCompanyRoleStore } from '../../store/companyRoleStore';
 export default function RoadmapGenerator({ onGenerate }: RoadmapGeneratorProps) {
+  const { companies, roles, fetchData } = useCompanyRoleStore();
+  useEffect(() => { fetchData(); }, [fetchData]);
+  const mappedCompanies = companies.map(c => c.name) || COMPANIES;
+  const mappedRoles = roles.map(r => r.title) || ROLES;
+  
   const [formData, setFormData] = useState({
     company: '',
     role: '',
@@ -205,7 +212,7 @@ export default function RoadmapGenerator({ onGenerate }: RoadmapGeneratorProps) 
           <SearchableDropdown 
             label="Target Company" 
             icon={Building2} 
-            options={COMPANIES} 
+            options={mappedCompanies.length ? mappedCompanies : COMPANIES} 
             value={formData.company} 
             onChange={(val: string) => updateField('company', val)} 
             placeholder="Search company..."
@@ -214,7 +221,7 @@ export default function RoadmapGenerator({ onGenerate }: RoadmapGeneratorProps) 
           <SearchableDropdown 
             label="Job Role" 
             icon={Briefcase} 
-            options={ROLES} 
+            options={mappedRoles.length ? mappedRoles : ROLES} 
             value={formData.role} 
             onChange={(val: string) => updateField('role', val)} 
             placeholder="Search role..."
@@ -360,7 +367,7 @@ export default function RoadmapGenerator({ onGenerate }: RoadmapGeneratorProps) 
       {/* Generate Button */}
       <div className="flex justify-center pt-4 pb-12">
         <button 
-          onClick={onGenerate}
+          onClick={() => onGenerate(formData)}
           className="group relative w-full md:w-auto px-10 py-5 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] text-white font-bold text-lg shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all overflow-hidden flex items-center justify-center gap-3 animate-gradient"
         >
           <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />

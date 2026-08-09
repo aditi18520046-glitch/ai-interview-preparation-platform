@@ -1,48 +1,50 @@
 import React from 'react';
 import { Target, FileText, Code2, Video, TrendingUp, Minus } from 'lucide-react';
-
-const stats = [
-  {
-    title: 'Overall Progress',
-    current: 78,
-    previous: 70,
-    icon: Target,
-    color: 'text-indigo-400',
-    bg: 'bg-indigo-500/10'
-  },
-  {
-    title: 'Resume Performance',
-    current: 85,
-    previous: 82,
-    icon: FileText,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10'
-  },
-  {
-    title: 'Interview Performance',
-    current: 72,
-    previous: 65,
-    icon: Video,
-    color: 'text-purple-400',
-    bg: 'bg-purple-500/10'
-  },
-  {
-    title: 'Coding Performance',
-    current: null, // Null to simulate uncompleted activity
-    previous: null,
-    icon: Code2,
-    color: 'text-pink-400',
-    bg: 'bg-pink-500/10'
-  }
-];
+import { useProgressStore } from '../../store/progressStore';
 
 export default function ProgressOverview({ hasActivity }: { hasActivity?: boolean }) {
+  const { progress } = useProgressStore();
+  const stats = [
+    {
+      title: 'Overall Progress',
+      current: progress?.overall_score || 0,
+      previous: 70,
+      icon: Target,
+      color: 'text-indigo-400',
+      bg: 'bg-indigo-500/10'
+    },
+    {
+      title: 'Resume Performance',
+      current: progress?.roadmap_progress || 0,
+      previous: 82,
+      icon: FileText,
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/10'
+    },
+    {
+      title: 'Interview Performance',
+      current: (progress?.interviews_completed || 0) * 10,
+      previous: 65,
+      icon: Video,
+      color: 'text-purple-400',
+      bg: 'bg-purple-500/10'
+    },
+    {
+      title: 'Coding Performance',
+      current: (progress?.coding_problems_solved || 0) * 10,
+      previous: null,
+      icon: Code2,
+      color: 'text-pink-400',
+      bg: 'bg-pink-500/10'
+    }
+  ];
+
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, i) => {
         const displayCurrent = hasActivity ? stat.current : null;
         const displayPrevious = hasActivity ? stat.previous : null;
-        const improvement = displayCurrent && displayPrevious ? displayCurrent - displayPrevious : 0;
+        const improvement = displayCurrent !== null && displayPrevious !== null ? displayCurrent - displayPrevious : 0;
         const isPositive = improvement > 0;
         const isNeutral = improvement === 0;
 
@@ -53,7 +55,7 @@ export default function ProgressOverview({ hasActivity }: { hasActivity?: boolea
                 <stat.icon className={`w-6 h-6 ${stat.color}`} />
               </div>
               
-              {displayCurrent !== null && (
+              {displayCurrent !== null && displayPrevious !== null && (
                 <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${isPositive ? 'bg-emerald-500/10 text-emerald-400' : isNeutral ? 'bg-slate-500/10 text-slate-400' : 'bg-red-500/10 text-red-400'}`}>
                   {isPositive ? <TrendingUp className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                   {isPositive ? '+' : ''}{improvement}%
@@ -66,7 +68,7 @@ export default function ProgressOverview({ hasActivity }: { hasActivity?: boolea
             {displayCurrent !== null ? (
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-white">{displayCurrent}%</span>
-                <span className="text-sm text-slate-500 line-through">{displayPrevious}%</span>
+                {displayPrevious !== null && <span className="text-sm text-slate-500 line-through">{displayPrevious}%</span>}
               </div>
             ) : (
               <p className="text-xs text-slate-500 leading-relaxed mt-2">

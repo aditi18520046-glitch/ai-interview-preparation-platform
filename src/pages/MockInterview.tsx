@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import MockInterviewWorkspace from '../components/interview/MockInterviewWorkspace';
 import { motion } from 'motion/react';
 import interviewImg from '../assets/images/ai_hologram_interview_1784197892421.jpg';
+import { useInterviewStore } from '../store/interviewStore';
 import { 
   Building2, Briefcase, Settings, Target, 
   Star, CheckCircle2, Monitor, Mic, Video, Globe,
@@ -128,7 +129,13 @@ function MultiSelect({ icon: Icon, label, options, values, onChange, colorClass 
   );
 }
 
+import { useCompanyRoleStore } from '../store/companyRoleStore';
 export default function MockInterview() {
+  const { companies, roles, fetchData } = useCompanyRoleStore();
+  useEffect(() => { fetchData(); }, [fetchData]);
+  const mappedCompanies = companies.map(c => c.name) || COMPANIES;
+  const mappedRoles = roles.map(r => r.title) || ROLES;
+  
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [isStarted, setIsStarted] = useState(false);
   const [company, setCompany] = useState(null);
@@ -143,6 +150,30 @@ export default function MockInterview() {
   const [focusTopics, setFocusTopics] = useState([]);
 
   const isFormComplete = company && role && experience && difficulty && type && mode && language && duration && (type !== 'Coding' || progLanguage);
+
+  const { startInterview, fetchHistory } = useInterviewStore();
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const [startError, setStartError] = useState<string | null>(null);
+
+  const handleStart = async () => {
+    setStartError(null);
+    try {
+      await startInterview({
+        company: company || '',
+        job_role: role || '',
+        interview_type: type || '',
+        difficulty: difficulty || '',
+      });
+      setIsStarted(true);
+    } catch (err: any) {
+      console.error('Error starting interview:', err);
+      setStartError(err.message || 'Failed to start interview. Please check your connection.');
+    }
+  };
 
   if (isStarted) {
     return (
@@ -203,12 +234,12 @@ export default function MockInterview() {
                 <Dropdown 
                   id="company" openDropdownId={openDropdownId} setOpenDropdownId={setOpenDropdownId}
                   icon={Building2} label="Company" colorClass="text-purple-400" 
-                  options={COMPANIES} value={company} onChange={setCompany} placeholder="Select Company" searchable={true}
+                  options={mappedCompanies.length ? mappedCompanies : COMPANIES} value={company} onChange={setCompany} placeholder="Select Company" searchable={true}
                 />
                 <Dropdown 
                   id="role" openDropdownId={openDropdownId} setOpenDropdownId={setOpenDropdownId}
                   icon={Briefcase} label="Job Role" colorClass="text-pink-400" 
-                  options={ROLES} value={role} onChange={setRole} placeholder="Select Role" searchable={true}
+                  options={mappedRoles.length ? mappedRoles : ROLES} value={role} onChange={setRole} placeholder="Select Role" searchable={true}
                 />
                 <Dropdown 
                   id="experience" openDropdownId={openDropdownId} setOpenDropdownId={setOpenDropdownId}
@@ -256,13 +287,19 @@ export default function MockInterview() {
                 />
               </div>
 
-              <div className="mt-8 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-end items-center gap-4">
-                {!isFormComplete && (
-                  <span className="text-sm text-slate-400 font-medium">Select all mandatory fields to start</span>
+              <div className="mt-8 pt-8 border-t border-white/10 flex flex-col items-end gap-4">
+                {startError && (
+                  <div className="w-full sm:w-auto p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium">
+                    {startError}
+                  </div>
                 )}
-                <button 
-                  disabled={!isFormComplete}
-                  onClick={() => setIsStarted(true)}
+                <div className="flex flex-col sm:flex-row justify-end items-center gap-4 w-full">
+                  {!isFormComplete && (
+                    <span className="text-sm text-slate-400 font-medium">Select all mandatory fields to start</span>
+                  )}
+                  <button 
+                    disabled={!isFormComplete}
+                    onClick={handleStart}
                   className={`w-full sm:w-auto px-10 py-4 rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all shadow-xl
                     ${isFormComplete 
                       ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white hover:-translate-y-1 shadow-indigo-500/25 cursor-pointer' 
@@ -273,6 +310,7 @@ export default function MockInterview() {
                   <Sparkles className={`w-5 h-5 ${isFormComplete ? 'animate-pulse text-yellow-300' : ''}`} />
                   {isFormComplete ? 'Start Mock Interview' : 'Start Mock Interview'}
                 </button>
+                </div>
               </div>
             </div>
       </div>

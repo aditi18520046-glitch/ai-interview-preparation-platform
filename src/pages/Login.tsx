@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { User, Lock, Eye, EyeOff, Loader2, Mail, Github } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Navbar from '../components/Navbar';
-import { getAuthUsers, checkPassword } from '../lib/auth';
+import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 
 export default function Login() {
@@ -16,7 +16,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error('Please enter email and password');
@@ -25,26 +25,25 @@ export default function Login() {
     
     setIsLoading(true);
     
-    setTimeout(() => {
-      setIsLoading(false);
-      const users = getAuthUsers();
-      const user = users.find(u => u.email === email);
-      
-      if (!user) {
-        toast.error('Incorrect email or password. Please try again.');
-        return;
-      }
-      
-      const isValid = checkPassword(password, user.passwordHash);
-      if (!isValid) {
-        toast.error('Incorrect email or password. Please try again.');
-        return;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
       }
 
-      login({ id: user.id, name: user.name, email: user.email });
-      toast.success('Logged in successfully');
-      navigate('/dashboard');
-    }, 800);
+      if (data.user) {
+        toast.success('Logged in successfully');
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Incorrect email or password. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -151,9 +150,9 @@ export default function Login() {
                   </div>
                   <span className="text-slate-400 group-hover:text-slate-300 transition-colors">Remember Me</span>
                 </label>
-                <a href="#" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+                <Link to="/forgot-password" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
                   Forgot Password?
-                </a>
+                </Link>
               </div>
 
               <button

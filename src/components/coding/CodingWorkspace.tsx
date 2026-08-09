@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Play, Send, RotateCcw, Settings, Maximize2, ChevronLeft, Lock, CheckCircle2 } from 'lucide-react';
+import { useCodingStore } from '../../store/codingStore';
 
 export default function CodingWorkspace({ onBack }: { onBack: () => void }) {
+  const { submitCode } = useCodingStore();
   const [activeTab, setActiveTab] = useState('problem');
   const [code, setCode] = useState('function twoSum(nums, target) {\n  // Write your code here\n  \n}');
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
-
   
   const handleRun = () => {
     setIsRunning(true);
@@ -16,8 +17,21 @@ export default function CodingWorkspace({ onBack }: { onBack: () => void }) {
     }, 1500);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsRunning(true);
+    
+    await submitCode({
+      programming_language: 'JavaScript',
+      company: 'General',
+      question: 'Two Sum',
+      submitted_code: code,
+      runtime: 52,
+      memory: 42.1,
+      passed_test_cases: 2,
+      failed_test_cases: 0,
+      score: 100
+    });
+
     setTimeout(() => {
       setOutput('Submission Successful!\n\nGenerating AI Review...\n\nAI Code Review:\n✅ Correctness Score: 100/100\n✨ Code Quality Score: 92/100\n⏱️ Time Complexity: O(n) - Optimal using Hash Map\n💾 Space Complexity: O(n) - Hash Map storage\n\nSuggestions: Consider using a Map object instead of a plain object for slightly better performance in V8.\n\nEdge Cases Handled: Empty array, negative numbers.\nAlternative Solutions: Brute force O(n^2), Two-pass Hash Map O(n).\n\nInterview Tip: Always mention the time/space trade-off when explaining this solution to your interviewer!');
       setIsRunning(false);

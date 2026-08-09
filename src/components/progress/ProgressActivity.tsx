@@ -9,7 +9,11 @@ const activities = [
   { action: 'Resume analyzed', date: 'Jul 15' }
 ];
 
+import { useProgressStore } from '../../store/progressStore';
+
 export default function ProgressActivity({ hasActivity }: { hasActivity?: boolean }) {
+  const { progress } = useProgressStore();
+  const displayActivities = progress?.recent_activities?.length ? progress.recent_activities : activities;
   return (
     <div className="bg-slate-900 border border-white/5 rounded-[32px] p-6 md:p-8">
       <div className="flex items-center gap-3 mb-6">
@@ -24,7 +28,7 @@ export default function ProgressActivity({ hasActivity }: { hasActivity?: boolea
 
       {hasActivity ? (
         <div className="space-y-4">
-          {activities.map((activity, i) => (
+          {displayActivities.map((activity: any, i) => (
             <div key={i} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 last:pb-0">
               <span className="text-sm font-medium text-slate-300">{activity.action}</span>
               <span className="text-xs text-slate-500">{activity.date}</span>

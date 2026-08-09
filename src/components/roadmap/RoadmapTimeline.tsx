@@ -151,7 +151,19 @@ const ROADMAP_STAGES = [
   }
 ];
 
+import { useRoadmapStore } from '../../store/roadmapStore';
 export default function RoadmapTimeline() {
+  const { currentRoadmap, updateProgress } = useRoadmapStore();
+  const handleToggleTopic = (topic: string) => {
+    if (!currentRoadmap) return;
+    const isCompleted = currentRoadmap.completed_topics?.includes(topic);
+    const completed = isCompleted ? currentRoadmap.completed_topics.filter(t => t !== topic) : [...(currentRoadmap.completed_topics || []), topic];
+    const totalTopics = currentRoadmap.remaining_topics?.length + currentRoadmap.completed_topics?.length || 1;
+    updateProgress(currentRoadmap.id!, {
+      completed_topics: completed,
+      completion_percentage: Math.round((completed.length / totalTopics) * 100)
+    });
+  };
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-8">
@@ -164,7 +176,7 @@ export default function RoadmapTimeline() {
       <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[27px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-indigo-500/50 before:via-purple-500/50 before:to-transparent">
         {ROADMAP_STAGES.map((stage, index) => {
           const isLeft = index % 2 === 0;
-          const isCompleted = stage.status === 'completed';
+          const isCompleted = currentRoadmap?.completed_topics?.includes(stage.title) || stage.status === 'completed';
           const isInProgress = stage.status === 'in-progress';
           const isLocked = stage.status === 'locked';
 

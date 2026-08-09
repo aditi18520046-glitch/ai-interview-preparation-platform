@@ -1,23 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Settings, Maximize2, ChevronLeft, Bot, User, Play, Square } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Settings, Maximize2, ChevronLeft, Bot, User, Play, Square, Send, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useInterviewStore } from '../../store/interviewStore';
 
 export default function MockInterviewWorkspace({ onEnd }: { onEnd: () => void }) {
+  const { currentInterview, updateInterview, finishInterview } = useInterviewStore();
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
-  const [isRecording, setIsRecording] = useState(false);
-  const [transcript, setTranscript] = useState([
-    { role: 'ai', text: 'Hello! I am your AI interviewer. To get started, could you please introduce yourself?' }
-  ]);
+  
+  const [transcript, setTranscript] = useState<{role: string, text: string, evaluation?: any}[]>([]);
   const [timeElapsed, setTimeElapsed] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [inputText, setInputText] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let timer: any;
-    if (isRecording) {
-      timer = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
-    }
+    timer = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
     return () => clearInterval(timer);
-  }, [isRecording]);
+  }, []);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [transcript, isGenerating]);
+
+  // Initial greeting / question generation
+  useEffect(() => {
+    if (transcript.length === 0 && !isGenerating && currentInterview) {
+      generateNextQuestion();
+    }
+  }, [currentInterview]);
+
+  const generateNextQuestion = async (userAnswer?: string) => {
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/interview/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: {
+            company: currentInterview?.company,
+            job_role: currentInterview?.job_role,
+            interview_type: currentInterview?.interview_type,
+            difficulty: currentInterview?.difficulty,
+          },
+          history: transcript,
+          answer: userAnswer
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate question: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (userAnswer && data.evaluation) {
+         // Update the last user message with its evaluation
+         setTranscript(prev => {
+            const newTranscript = [...prev];
+            const lastMsg = newTranscript[newTranscript.length - 1];
+            if (lastMsg.role === 'user') {
+                lastMsg.evaluation = data.evaluation;
+            }
+            return newTranscript;
+         });
+      }
+
+      setTranscript(prev => [...prev, { role: 'ai', text: data.nextQuestion }]);
+      
+      if (currentInterview?.id) {
+        updateInterview(currentInterview.id, {
+          questions: [...transcript.filter(t => t.role === 'ai'), { role: 'ai', text: data.nextQuestion }],
+          answers: transcript.filter(t => t.role === 'user'),
+          // We can also save the most recent evaluation or cumulative score here if we wanted
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setTranscript(prev => [...prev, { role: 'ai', text: "Unable to generate interview question. Please try again." }]);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSend = () => {
+    if (!inputText.trim() || isGenerating) return;
+    const newAnswer = inputText.trim();
+    setInputText("");
+    setTranscript(prev => [...prev, { role: 'user', text: newAnswer }]);
+    generateNextQuestion(newAnswer);
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -25,22 +100,38 @@ export default function MockInterviewWorkspace({ onEnd }: { onEnd: () => void })
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleToggleRecording = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      // Simulate user speaking
-      setTimeout(() => {
-        setTranscript(prev => [...prev, { role: 'user', text: "Hi, I'm a software engineer with 3 years of experience..." }]);
-      }, 3000);
-      
-      // Simulate AI response
-      setTimeout(() => {
-        setIsRecording(false);
-        setTranscript(prev => [...prev, { role: 'ai', text: "That's great. Let's move on to some technical questions. Can you explain the difference between a process and a thread?" }]);
-      }, 7000);
-    } else {
-      setIsRecording(false);
+  const handleEnd = async () => {
+    if (currentInterview?.id) {
+      // Get final report
+      setIsGenerating(true);
+      try {
+          const response = await fetch('/api/interview/report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              config: currentInterview,
+              history: transcript,
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to generate report: ${response.status}`);
+          }
+          
+          const report = await response.json();
+          await finishInterview(currentInterview.id, {
+              ai_feedback: JSON.stringify(report),
+              final_score: report.overallScore || 0,
+              duration: timeElapsed
+          });
+      } catch (err) {
+          console.error(err);
+          await finishInterview(currentInterview.id, {
+              duration: timeElapsed
+          });
+      }
     }
+    onEnd();
   };
 
   return (
@@ -48,11 +139,11 @@ export default function MockInterviewWorkspace({ onEnd }: { onEnd: () => void })
       {/* Top Bar */}
       <div className="flex items-center justify-between px-6 py-4 bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl shadow-sm">
         <div className="flex items-center gap-4">
-          <button onClick={onEnd} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors">
+          <button onClick={handleEnd} className="p-2 hover:bg-white/5 rounded-lg text-white transition-colors">
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-lg font-bold text-white">Software Engineer Mock Interview</h2>
+            <h2 className="text-lg font-bold text-white">{currentInterview?.job_role || 'Software Engineer'} Mock Interview</h2>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Live Session
               <span className="px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10">{formatTime(timeElapsed)}</span>
@@ -62,7 +153,7 @@ export default function MockInterviewWorkspace({ onEnd }: { onEnd: () => void })
         <div className="flex items-center gap-3">
           <button className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors"><Settings className="w-5 h-5" /></button>
           <button className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors"><Maximize2 className="w-5 h-5" /></button>
-          <button onClick={onEnd} className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 border border-red-500/20">
+          <button onClick={handleEnd} className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 border border-red-500/20">
             <PhoneOff className="w-4 h-4" /> End Interview
           </button>
         </div>
@@ -76,15 +167,16 @@ export default function MockInterviewWorkspace({ onEnd }: { onEnd: () => void })
              {/* Abstract AI Avatar Animation */}
              <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 to-purple-900/20" />
              <motion.div 
-                animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                animate={{ scale: isGenerating ? [1, 1.1, 1] : [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+                transition={{ duration: isGenerating ? 2 : 4, repeat: Infinity, ease: "easeInOut" }}
                 className="w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-4 border-indigo-500/30 flex items-center justify-center backdrop-blur-xl shadow-[0_0_60px_rgba(99,102,241,0.2)]"
              >
                <Bot className="w-20 h-20 text-indigo-400" />
              </motion.div>
              <div className="absolute bottom-4 left-4 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-sm font-medium text-white border border-white/10 flex items-center gap-2">
-               <Bot className="w-4 h-4 text-indigo-400" /> AI Interviewer
+               <Bot className="w-4 h-4 text-indigo-400" /> AI Interviewer {isGenerating && ' (Thinking...)'}
              </div>
+             
              {/* User Video Picture-in-Picture */}
              <div className="absolute bottom-4 right-4 w-48 h-32 bg-slate-900 rounded-xl border-2 border-slate-700 overflow-hidden shadow-2xl flex items-center justify-center">
                {isVideoOn ? (
@@ -100,37 +192,40 @@ export default function MockInterviewWorkspace({ onEnd }: { onEnd: () => void })
                )}
              </div>
           </div>
-
-          {/* Control Bar */}
-          <div className="h-20 bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl flex items-center justify-center gap-4 px-6 shadow-sm">
-             <button 
-               onClick={() => setIsMicOn(!isMicOn)}
-               className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isMicOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
-             >
-               {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+          
+          {/* Control Bar - Changed to Chat Input */}
+          <div className="min-h-[80px] bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl flex items-center gap-4 px-4 py-2 shadow-sm">
+             <button onClick={() => setIsMicOn(!isMicOn)} className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all ${isMicOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}>
+               {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
              </button>
-             <button 
-               onClick={() => setIsVideoOn(!isVideoOn)}
-               className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isVideoOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
-             >
-               {isVideoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-             </button>
-             <button className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all">
-               <Monitor className="w-5 h-5" />
+             <button onClick={() => setIsVideoOn(!isVideoOn)} className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all ${isVideoOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}>
+               {isVideoOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
              </button>
              
-             <div className="w-px h-8 bg-white/10 mx-2" />
+             <div className="w-px h-8 bg-white/10 mx-1 shrink-0" />
              
-             <button 
-               onClick={handleToggleRecording}
-               className={`px-6 py-3 rounded-full font-bold text-sm flex items-center gap-2 transition-all shadow-lg ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/25' : 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-indigo-500/25'}`}
-             >
-               {isRecording ? (
-                 <><Square className="w-4 h-4 fill-current" /> Stop Answering</>
-               ) : (
-                 <><Play className="w-4 h-4 fill-current" /> Answer Question</>
-               )}
-             </button>
+             <div className="flex-1 flex items-center bg-slate-950/50 rounded-xl border border-white/10 p-1">
+                <textarea 
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                     if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                     }
+                  }}
+                  placeholder="Type your answer here..."
+                  className="flex-1 bg-transparent border-none text-white text-sm px-3 py-2 focus:ring-0 resize-none h-10 max-h-32"
+                  rows={1}
+                />
+                <button 
+                  onClick={handleSend}
+                  disabled={!inputText.trim() || isGenerating}
+                  className="w-10 h-10 shrink-0 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-700 disabled:text-slate-400 text-white rounded-lg flex items-center justify-center transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+             </div>
           </div>
         </div>
 
@@ -139,7 +234,7 @@ export default function MockInterviewWorkspace({ onEnd }: { onEnd: () => void })
           <div className="px-6 py-4 border-b border-white/5 bg-slate-800/50 flex items-center justify-between">
             <h3 className="font-bold text-white text-sm uppercase tracking-wider">Live Transcript</h3>
           </div>
-          <div className="flex-1 p-6 overflow-y-auto space-y-6">
+          <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto space-y-6">
             {transcript.map((msg, i) => (
               <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className={`flex items-center gap-2 mb-1.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -151,23 +246,35 @@ export default function MockInterviewWorkspace({ onEnd }: { onEnd: () => void })
                 <div className={`p-4 rounded-2xl max-w-[85%] text-[15px] leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-emerald-500/10 text-emerald-100 border border-emerald-500/20 rounded-tr-sm' : 'bg-slate-800/80 text-slate-200 border border-white/5 rounded-tl-sm'}`}>
                   {msg.text}
                 </div>
+                {msg.evaluation && (
+                  <div className="mt-2 p-3 bg-slate-950 border border-white/5 rounded-xl max-w-[85%] text-xs text-slate-300">
+                     <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-slate-400 uppercase tracking-wider">AI Evaluation</span>
+                        <span className={`px-2 py-0.5 rounded font-bold ${msg.evaluation.overall >= 80 ? 'bg-emerald-500/20 text-emerald-400' : msg.evaluation.overall >= 60 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                           Score: {msg.evaluation.overall}/100
+                        </span>
+                     </div>
+                     <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div><span className="text-slate-500">Correctness:</span> {msg.evaluation.correctness}</div>
+                        <div><span className="text-slate-500">Relevance:</span> {msg.evaluation.relevance}</div>
+                        <div><span className="text-slate-500">Completeness:</span> {msg.evaluation.completeness}</div>
+                        <div><span className="text-slate-500">Clarity:</span> {msg.evaluation.clarity}</div>
+                     </div>
+                  </div>
+                )}
               </div>
             ))}
-            {isRecording && (
-              <div className="flex flex-col items-end">
-                <div className="flex items-center gap-2 mb-1.5 flex-row-reverse">
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500/20 text-emerald-400">
-                    <User className="w-3.5 h-3.5" />
+            {isGenerating && (
+              <div className="flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center bg-indigo-500/20 text-indigo-400">
+                    <Bot className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase">You</span>
+                  <span className="text-xs font-semibold text-slate-400 uppercase">AI Interviewer</span>
                 </div>
-                <div className="p-4 rounded-2xl bg-emerald-500/5 text-emerald-200/50 border border-emerald-500/10 rounded-tr-sm flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                  <span className="text-sm italic">Listening...</span>
+                <div className="p-4 rounded-2xl bg-slate-800/80 text-slate-200 border border-white/5 rounded-tl-sm flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                  <span className="text-sm italic">Analyzing & generating next question...</span>
                 </div>
               </div>
             )}

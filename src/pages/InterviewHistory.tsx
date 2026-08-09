@@ -42,8 +42,55 @@ interface InterviewRecord {
   recommendedTopics: string[];
 }
 
+import { useInterviewStore } from '../store/interviewStore';
+import { useEffect } from 'react';
+
 export default function InterviewHistory() {
-  const [interviews, setInterviews] = useState<InterviewRecord[]>([]); // Strictly empty as per instructions
+  const { history, fetchHistory } = useInterviewStore();
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
+  
+  const interviews = history.map((h: any) => {
+    let feedback = {};
+    try {
+      feedback = h.ai_feedback ? JSON.parse(h.ai_feedback) : {};
+    } catch(e) {}
+    
+    return {
+      id: h.id,
+      company: h.company || 'Unknown',
+      role: h.job_role || 'General',
+      type: h.interview_type || 'Technical',
+      difficulty: h.difficulty || 'Medium',
+      mode: 'Video',
+      date: new Date(h.start_time).toLocaleDateString(),
+      duration: h.duration ? Math.round(h.duration / 60) : 0,
+      score: h.final_score || 0,
+      status: h.status === 'completed' ? 'Completed' : 'Interrupted',
+      readiness: h.final_score > 80 ? 'High' : h.final_score > 60 ? 'Medium' : 'Low',
+      trend: 'Stable',
+      scores: {
+        technical: feedback?.technicalScore || 0,
+        communication: feedback?.communicationScore || 0,
+        confidence: 0,
+        problemSolving: feedback?.problemSolvingScore || 0,
+      },
+      questions: (h.questions || []).map((q: any, i: number) => {
+         const ans = (h.answers || [])[i];
+         return {
+           id: `q${i}`,
+           question: q.text,
+           userAnswer: ans ? ans.text : '',
+           aiEvaluation: ans && ans.evaluation ? `Score: ${ans.evaluation.overall}/100. ${ans.evaluation.strengths.join(', ')}` : '',
+           correctApproach: ans && ans.evaluation ? ans.evaluation.improvements.join(', ') : '',
+           improvement: ans && ans.evaluation ? ans.evaluation.improvements.join(', ') : ''
+         };
+      }),
+      strengths: feedback?.strengths || [],
+      weaknesses: feedback?.weaknesses || [],
+      summary: feedback?.summary || '',
+      preparationPlan: feedback?.preparationPlan || ''
+    };
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);

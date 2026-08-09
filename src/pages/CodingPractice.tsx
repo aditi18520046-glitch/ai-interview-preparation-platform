@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useCodingStore } from '../store/codingStore';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import CodingWorkspace from '../components/coding/CodingWorkspace';
 
@@ -10,6 +11,11 @@ import CodingProblemTable from '../components/coding_practice/CodingProblemTable
 import CodingRecommendedProblems from '../components/coding_practice/CodingRecommendedProblems';
 
 export default function CodingPractice() {
+  const { fetchHistory } = useCodingStore();
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
   const [activeProblem, setActiveProblem] = useState<string | null>(null);
 
   if (activeProblem) {

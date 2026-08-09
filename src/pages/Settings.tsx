@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import { useProfileStore } from '../store/profileStore';
 import { getAuthUsers, saveAuthUsers, hashPassword, checkPassword } from '../lib/auth';
 import { 
   User, Target, BrainCircuit, Bell, Lock, Shield, Palette, 
@@ -26,17 +27,107 @@ const CATEGORIES = [
   { id: 'about', label: 'About', icon: Info, color: 'text-slate-500' },
 ];
 
+import { useSettingsStore } from '../store/settingsStore';
+
 export default function Settings() {
+  const { settings, updateSettings, fetchSettings } = useSettingsStore();
+  
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+  const { user } = useAuthStore();
+  const { profile, updateProfile, uploadProfilePicture } = useProfileStore();
+
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
   const [expandedMobileCategory, setExpandedMobileCategory] = useState<string | null>(CATEGORIES[0].id);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    college: '',
+    branch: '',
+    graduation_year: '',
+    skills: '',
+    linkedin: '',
+    github: '',
+    portfolio: '',
+    career_goal: '',
+    resume_url: '',
+    profile_picture: ''
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        college: profile.college || '',
+        branch: profile.branch || '',
+        graduation_year: profile.graduation_year || '',
+        skills: profile.skills || '',
+        linkedin: profile.linkedin || '',
+        github: profile.github || '',
+        portfolio: profile.portfolio || '',
+        career_goal: profile.career_goal || '',
+        resume_url: profile.resume_url || '',
+        profile_picture: profile.profile_picture || ''
+      });
+    }
+  }, [profile]);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !user) return;
+    const file = e.target.files[0];
+    try {
+      toast.loading('Uploading...', { id: 'upload' });
+      await uploadProfilePicture(user.id, file);
+      toast.success('Photo uploaded', { id: 'upload' });
+    } catch (error: any) {
+      toast.error('Failed to upload', { id: 'upload' });
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      await updateProfile(user.id, formData);
+      toast.success('Profile updated successfully');
+      setHasChanges(false);
+    } catch (error: any) {
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const toggleMobileCategory = (id: string) => {
     setExpandedMobileCategory(prev => prev === id ? null : id);
   };
 
-  const handleSettingChange = () => {
+  const handleSettingChange = async (key?: string, value?: any) => {
+    setHasChanges(true);
+    if (key) {
+      // Very naive mapping to the generic JSON columns
+      if (['theme', 'language'].includes(key)) {
+        await updateSettings({ [key]: value });
+      } else {
+        // Just mock updating privacy_settings and notification_preferences
+        const type = key.includes('Privacy') || key.includes('Visibility') ? 'privacy_settings' : 'notification_preferences';
+        await updateSettings({ [type]: { ...(settings?.[type] || {}), [key]: value } });
+      }
+    }
     setHasChanges(true);
   };
 
@@ -48,27 +139,38 @@ export default function Settings() {
             <h2 className="text-xl font-bold text-white mb-6">Account Settings</h2>
             
             <div className="flex items-center gap-6 pb-6 border-b border-white/5">
-              <div className="w-20 h-20 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-slate-500 overflow-hidden">
-                <User className="w-10 h-10" />
+              <div className="w-20 h-20 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-slate-500 overflow-hidden relative group">
+                {formData.profile_picture ? (
+                   <img src={formData.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-10 h-10" />
+                )}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer pointer-events-none">
+                  <span className="text-xs text-white">Edit</span>
+                </div>
               </div>
               <div className="space-y-2">
-                <button className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors">
+                <label className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer inline-block">
                   Upload Photo
-                </button>
+                  <input type="file" accept="image/jpeg, image/png, image/gif" className="hidden" onChange={handleFileChange} />
+                </label>
                 <p className="text-xs text-slate-400">JPG, GIF or PNG. Max size of 2MB.</p>
               </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <InputField label="Full Name" placeholder="John Doe" onChange={handleSettingChange} />
-              <InputField label="Email Address" type="email" placeholder="john@example.com" onChange={handleSettingChange} />
-              <InputField label="Phone Number" type="tel" placeholder="+1 (555) 000-0000" onChange={handleSettingChange} />
-              <InputField label="College/University" placeholder="University Name" onChange={handleSettingChange} />
-              <InputField label="Current Company (Optional)" placeholder="Company Name" onChange={handleSettingChange} />
-              <InputField label="Career Goal" placeholder="e.g. Senior Software Engineer" onChange={handleSettingChange} />
-              <InputField label="LinkedIn Profile" placeholder="https://linkedin.com/in/username" onChange={handleSettingChange} />
-              <InputField label="GitHub Profile" placeholder="https://github.com/username" onChange={handleSettingChange} />
-              <InputField label="Portfolio Website" placeholder="https://yourwebsite.com" onChange={handleSettingChange} />
+              <InputField label="Full Name" value={formData.full_name} placeholder="John Doe" onChange={(e) => handleInputChange('full_name', e.target.value)} />
+              <InputField label="Email Address" type="email" value={formData.email} placeholder="john@example.com" onChange={(e) => handleInputChange('email', e.target.value)} />
+              <InputField label="Phone Number" type="tel" value={formData.phone} placeholder="+1 (555) 000-0000" onChange={(e) => handleInputChange('phone', e.target.value)} />
+              <InputField label="College/University" value={formData.college} placeholder="University Name" onChange={(e) => handleInputChange('college', e.target.value)} />
+              <InputField label="Branch" value={formData.branch} placeholder="Computer Science" onChange={(e) => handleInputChange('branch', e.target.value)} />
+              <InputField label="Graduation Year" value={formData.graduation_year} placeholder="2025" onChange={(e) => handleInputChange('graduation_year', e.target.value)} />
+              <InputField label="Skills" value={formData.skills} placeholder="React, Node.js, Python" onChange={(e) => handleInputChange('skills', e.target.value)} />
+              <InputField label="Career Goal" value={formData.career_goal} placeholder="e.g. Senior Software Engineer" onChange={(e) => handleInputChange('career_goal', e.target.value)} />
+              <InputField label="LinkedIn Profile" value={formData.linkedin} placeholder="https://linkedin.com/in/username" onChange={(e) => handleInputChange('linkedin', e.target.value)} />
+              <InputField label="GitHub Profile" value={formData.github} placeholder="https://github.com/username" onChange={(e) => handleInputChange('github', e.target.value)} />
+              <InputField label="Portfolio Website" value={formData.portfolio} placeholder="https://yourwebsite.com" onChange={(e) => handleInputChange('portfolio', e.target.value)} />
+              <InputField label="Resume URL" value={formData.resume_url} placeholder="https://drive.google.com/..." onChange={(e) => handleInputChange('resume_url', e.target.value)} />
             </div>
           </div>
         );
@@ -488,13 +590,11 @@ export default function Settings() {
                 Cancel
               </button>
               <button 
-                onClick={() => {
-                  setHasChanges(false);
-                  // Optional: add toast notification here
-                }}
-                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg flex items-center gap-2 transition-colors"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
               >
-                <Save className="w-4 h-4" /> Save Changes
+                <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
@@ -507,12 +607,13 @@ export default function Settings() {
 
 // Subcomponents
 
-function InputField({ label, type = "text", placeholder, onChange }: { label: string, type?: string, placeholder?: string, onChange: () => void }) {
+function InputField({ label, type = "text", value, placeholder, onChange }: { label: string, type?: string, value?: string, placeholder?: string, onChange: (e: any) => void }) {
   return (
     <div>
       <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">{label}</label>
       <input 
         type={type} 
+        value={value}
         placeholder={placeholder}
         onChange={onChange}
         className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600"
@@ -539,12 +640,12 @@ function SelectField({ label, options, description, onChange }: { label: string,
   );
 }
 
-function ToggleSetting({ label, description, defaultOn, onChange }: { label: string, description?: string, defaultOn: boolean, onChange: () => void }) {
+function ToggleSetting({ label, description, defaultOn, onChange }: { label: string, description?: string, defaultOn: boolean, onChange: (key?: string, val?: any) => void }) {
   const [isOn, setIsOn] = useState(defaultOn);
   
   const handleToggle = () => {
     setIsOn(!isOn);
-    onChange();
+    onChange(label, !isOn);
   };
 
   return (

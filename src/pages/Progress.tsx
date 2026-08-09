@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useProgressStore } from '../store/progressStore';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import ProgressHero from '../components/progress/ProgressHero';
 import ProgressOverview from '../components/progress/ProgressOverview';
@@ -14,7 +15,16 @@ import ProgressJourney from '../components/progress/ProgressJourney';
 import { Activity } from 'lucide-react';
 
 export default function Progress() {
+  const { progress, fetchProgress, updateProgress } = useProgressStore();
+  
+  useEffect(() => {
+    fetchProgress();
+    // In a real app we might not want to update blindly on load, but we do it to simulate auto-update
+    updateProgress();
+  }, [fetchProgress, updateProgress]);
+
   const [hasActivity, setHasActivity] = useState(false);
+  useEffect(() => { if (progress) setHasActivity(true); }, [progress]);
 
   return (
     <DashboardLayout>

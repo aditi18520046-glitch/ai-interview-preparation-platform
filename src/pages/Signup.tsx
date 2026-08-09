@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { User, Lock, Eye, EyeOff, Loader2, Mail, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Navbar from '../components/Navbar';
-import { getAuthUsers, hashPassword, saveAuthUsers } from '../lib/auth';
+import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 
 export default function Signup() {
@@ -16,6 +16,7 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   
   const [reqLength, setReqLength] = useState(false);
   const [reqUpper, setReqUpper] = useState(false);
@@ -34,7 +35,7 @@ export default function Signup() {
   const passwordStrength = [reqLength, reqUpper, reqLower, reqNumber, reqSpecial].filter(Boolean).length;
   const isPasswordValid = passwordStrength === 5;
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !password) {
       toast.error('Please fill in all fields');
@@ -47,28 +48,33 @@ export default function Signup() {
     
     setIsLoading(true);
     
-    setTimeout(() => {
-      setIsLoading(false);
-      const users = getAuthUsers();
-      
-      if (users.find(u => u.email === email)) {
-        toast.error('Email is already registered.');
-        return;
-      }
-      
-      const newUser = {
-        id: Math.random().toString(36).substring(2, 15),
-        name,
+    try {
+      const { data, error } = await supabase.auth.signUp({
         email,
-        passwordHash: hashPassword(password),
-      };
-      
-      saveAuthUsers([...users, newUser]);
-      login({ id: newUser.id, name: newUser.name, email: newUser.email });
-      
-      toast.success('Account created successfully');
-      navigate('/dashboard');
-    }, 800);
+        password,
+        options: {
+          data: {
+            name,
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.session) {
+        toast.success('Account created successfully');
+        navigate('/dashboard');
+      } else {
+        toast.success('Check your email to confirm your account');
+        setIsSuccess(true);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Error creating account. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getStrengthColor = () => {
@@ -130,8 +136,21 @@ export default function Signup() {
             </Link>
             <p className="text-slate-400 text-sm mb-8">Join us and start preparing today.</p>
 
-            <form onSubmit={handleSignup} className="space-y-5">
-              <div>
+            {isSuccess ? (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 text-center">
+                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">Check your email</h3>
+                <p className="text-emerald-400 text-sm font-medium">
+                  We've sent a verification link to {email}. Please verify your email to continue.
+                </p>
+                <Link to="/login" className="mt-6 inline-block w-full bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3 font-semibold transition-colors">
+                  Go to Login
+                </Link>
+              </div>
+            ) : (
+            <>
+              <form onSubmit={handleSignup} className="space-y-5">
+                <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5 ml-1">Full Name</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-400 transition-colors">
@@ -237,6 +256,8 @@ export default function Signup() {
                 </button>
               </p>
             </div>
+            </>
+            )}
           </motion.div>
         </div>
       </div>

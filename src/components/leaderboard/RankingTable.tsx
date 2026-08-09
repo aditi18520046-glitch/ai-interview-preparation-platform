@@ -26,8 +26,11 @@ const skillChampions = [
   { skill: 'Communication Champion', name: 'James Wilson', score: 98, icon: MessageSquare, color: 'text-pink-400', bg: 'bg-pink-500/10', avatar: 'https://i.pravatar.cc/150?u=8' },
 ];
 
+import { useLeaderboardStore } from '../../store/leaderboardStore';
+
 export default function RankingTable({ category, hasActivity }: RankingTableProps) {
-  const displayData = hasActivity ? tableData : tableData.filter(row => !row.isCurrentUser);
+  const { entries, userEntry } = useLeaderboardStore();
+  const displayData = entries.length ? entries.map((e, i) => ({ rank: i + 1, name: e.user_id?.substring(0,8) || 'User', college: 'Unknown', score: e.total_xp || 0, level: 'Gold', badge: 'Pro', avatar: 'https://i.pravatar.cc/150?u='+i, isCurrentUser: e.user_id === userEntry?.user_id })) : (hasActivity ? tableData : tableData.filter(row => !row.isCurrentUser));
 
   if (category === 'skills') {
     if (!hasActivity) {

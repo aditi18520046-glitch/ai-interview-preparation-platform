@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { 
   Bell, Search, Filter, ChevronDown, Settings, CheckCircle2, 
@@ -22,9 +22,15 @@ interface NotificationRecord {
   recommendedAction?: string;
 }
 
+import { useNotificationStore } from '../store/notificationStore';
 export default function Notifications() {
+  const { notifications, fetchNotifications, markAsRead, deleteNotification } = useNotificationStore();
+  
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
   // Empty initially based on instructions
-  const [notifications, setNotifications] = useState<NotificationRecord[]>([]); 
+   
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -32,13 +38,13 @@ export default function Notifications() {
   // Derived stats (all 0 initially since notifications is empty)
   const stats = {
     total: notifications.length,
-    unread: notifications.filter(n => !n.isRead).length,
-    read: notifications.filter(n => n.isRead).length,
+    unread: notifications.filter(n => !n.is_read).length,
+    read: notifications.filter(n => n.is_read).length,
     today: 0, // Logic for today's alerts
     upcoming: 0,
-    achievements: notifications.filter(n => n.category === 'Achievement').length,
-    aiRecommendations: notifications.filter(n => n.category === 'AI Recommendation').length,
-    systemUpdates: notifications.filter(n => n.category === 'System Update').length,
+    achievements: notifications.filter(n => n.type === 'Achievement').length,
+    aiRecommendations: notifications.filter(n => n.type === 'AI Recommendation').length,
+    systemUpdates: notifications.filter(n => n.type === 'System Update').length,
   };
 
   const reminders = notifications.length > 0 ? [] : [];

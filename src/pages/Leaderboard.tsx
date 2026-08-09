@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import LeaderboardHero from '../components/leaderboard/LeaderboardHero';
 import LeaderboardTabs from '../components/leaderboard/LeaderboardTabs';
@@ -13,7 +13,10 @@ import { Activity } from 'lucide-react';
 
 export type Category = 'overall' | 'resume' | 'interview' | 'coding' | 'streak' | 'skills';
 
+import { useLeaderboardStore } from '../store/leaderboardStore';
 export default function Leaderboard() {
+  const { fetchLeaderboard } = useLeaderboardStore();
+  useEffect(() => { fetchLeaderboard(); }, [fetchLeaderboard]);
   const [activeCategory, setActiveCategory] = useState<Category>('overall');
   const [hasActivity, setHasActivity] = useState(false);
 

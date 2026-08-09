@@ -7,13 +7,15 @@ import {
   Clock, CheckCircle2, Award, TrendingUp, BarChart, FileText,
   BookOpen, Lock, Play, Download
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import profileHero from '../assets/images/profile_hero_1784645278930.jpg';
+import { useProfileStore } from '../store/profileStore';
 
 export default function Profile() {
+  const { profile } = useProfileStore();
+
   // Empty states / user data
-  const [personalInfo, setPersonalInfo] = useState<any>(null);
   const [careerGoals, setCareerGoals] = useState<any>(null);
-  const [skills, setSkills] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [interviews, setInterviews] = useState<any[]>([]);
   const [codingStats, setCodingStats] = useState<any>(null);
@@ -21,8 +23,10 @@ export default function Profile() {
   const [learningProgress, setLearningProgress] = useState<any>(null);
   const [achievements, setAchievements] = useState<any[]>([]);
   
-  // Profile completion based on populated fields (0 since all are null/empty)
-  const completionPercentage = 0; 
+  const skills = profile?.skills ? profile.skills.split(',').map(s => s.trim()) : [];
+
+  const completionPercentage = profile ? 
+    Math.round((Object.values(profile).filter(v => v !== null && v !== '').length / 14) * 100) : 0;
 
   const emptyStateMessage = (title: string, message: string, btnText: string, icon: any) => (
     <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-8 flex flex-col items-center justify-center text-center">
@@ -48,10 +52,14 @@ export default function Profile() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
             <div className="max-w-2xl">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                  <User className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 overflow-hidden">
+                  {profile?.profile_picture ? (
+                    <img src={profile.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-6 h-6 text-white" />
+                  )}
                 </div>
-                <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">My Career Profile</h1>
+                <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{profile?.full_name || 'My Career Profile'}</h1>
               </div>
               <p className="text-slate-400 text-lg leading-relaxed mb-6">
                 View your complete interview preparation journey, monitor your progress, manage your skills, and receive AI-powered recommendations tailored to your career goals.
@@ -73,11 +81,11 @@ export default function Profile() {
             
             <div className="w-64 h-64 shrink-0 rounded-2xl overflow-hidden shadow-2xl border border-white/10 relative">
               <div className="absolute inset-0 bg-indigo-500/20 mix-blend-overlay z-10" />
-              <img 
-                src={profileHero} 
-                alt="AI Career Profile" 
-                className="w-full h-full object-cover object-center"
-              />
+              {profile?.profile_picture ? (
+                <img src={profile.profile_picture} alt="AI Career Profile" className="w-full h-full object-cover object-center" />
+              ) : (
+                <img src={profileHero} alt="AI Career Profile" className="w-full h-full object-cover object-center" />
+              )}
             </div>
           </div>
         </div>
@@ -87,69 +95,65 @@ export default function Profile() {
           
           {/* Personal Information */}
           <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 relative">
-            <button className="absolute top-6 right-6 p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors">
+            <Link to="/dashboard/settings" className="absolute top-6 right-6 p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors">
               <Edit3 className="w-4 h-4" />
-            </button>
+            </Link>
             <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <User className="w-5 h-5 text-indigo-400" /> Personal Information
             </h2>
             
-            {personalInfo ? (
-              <div className="space-y-4">
-                {/* Real data would go here */}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-slate-500">
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 overflow-hidden">
+                  {profile?.profile_picture ? (
+                    <img src={profile.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
                     <User className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">Not Added Yet</h3>
-                    <p className="text-sm text-slate-500">Add your professional headline</p>
-                  </div>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                  <InfoItem icon={Mail} label="Email" value="Not Added" />
-                  <InfoItem icon={Phone} label="Phone" value="Not Added" />
-                  <InfoItem icon={MapPin} label="Location" value="Not Added" />
-                  <InfoItem icon={Briefcase} label="Experience" value="Not Added" />
-                  <InfoItem icon={GraduationCap} label="Education" value="Not Added" />
-                  <InfoItem icon={Globe} label="Preferred Language" value="Not Added" />
+                <div>
+                  <h3 className="text-lg font-bold text-white">{profile?.full_name || 'Not Added Yet'}</h3>
+                  <p className="text-sm text-slate-500">{profile?.career_goal || 'Add your professional headline'}</p>
                 </div>
               </div>
-            )}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                <InfoItem icon={Mail} label="Email" value={profile?.email || 'Not Added'} />
+                <InfoItem icon={Phone} label="Phone" value={profile?.phone || 'Not Added'} />
+                <InfoItem icon={GraduationCap} label="College" value={profile?.college || 'Not Added'} />
+                <InfoItem icon={BookOpen} label="Branch" value={profile?.branch || 'Not Added'} />
+                <InfoItem icon={Calendar} label="Graduation Year" value={profile?.graduation_year || 'Not Added'} />
+                <InfoItem icon={Linkedin} label="LinkedIn" value={profile?.linkedin ? 'Linked' : 'Not Added'} />
+                <InfoItem icon={Github} label="GitHub" value={profile?.github ? 'Linked' : 'Not Added'} />
+                <InfoItem icon={Globe} label="Portfolio" value={profile?.portfolio ? 'Linked' : 'Not Added'} />
+              </div>
+            </div>
           </div>
 
           {/* Career Goals */}
           <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 relative">
-            <button className="absolute top-6 right-6 p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors">
+            <Link to="/dashboard/settings" className="absolute top-6 right-6 p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors">
               <Edit3 className="w-4 h-4" />
-            </button>
+            </Link>
             <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <Target className="w-5 h-5 text-emerald-400" /> Career Goals
             </h2>
             
-            {careerGoals ? (
-              <div className="space-y-4">
-                 {/* Real data would go here */}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <InfoItem icon={Briefcase} label="Target Job Role" value="Not Added" />
-                <InfoItem icon={Building2} label="Target Company" value="Not Added" />
-                <InfoItem icon={Calendar} label="Expected Placement" value="Not Added" />
-                <InfoItem icon={DollarSign} label="Expected Salary" value="Not Added" />
-                <InfoItem icon={MapPin} label="Preferred Location" value="Not Added" />
-                
+            <div className="space-y-4">
+              <InfoItem icon={Briefcase} label="Target Job Role" value={profile?.career_goal || 'Not Added'} />
+              <InfoItem icon={Building2} label="Target Company" value="Not Added" />
+              <InfoItem icon={Calendar} label="Expected Placement" value="Not Added" />
+              <InfoItem icon={DollarSign} label="Expected Salary" value="Not Added" />
+              <InfoItem icon={MapPin} label="Preferred Location" value="Not Added" />
+              
+              {!profile?.career_goal && (
                 <div className="mt-6 pt-6 border-t border-white/5 text-center">
                   <p className="text-sm text-slate-400 mb-4">Set your career goals to get personalized AI recommendations and roadmaps.</p>
-                  <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm">
+                  <Link to="/dashboard/settings" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm">
                     Set Career Goals
-                  </button>
+                  </Link>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
@@ -179,7 +183,14 @@ export default function Profile() {
           </h2>
           {skills.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Render skills here */}
+              {skills.map((skill, i) => (
+                <div key={i} className="flex items-center gap-3 p-4 bg-slate-950 border border-white/5 rounded-xl">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                    <Code2 className="w-5 h-5" />
+                  </div>
+                  <span className="text-white font-medium">{skill}</span>
+                </div>
+              ))}
             </div>
           ) : (
             emptyStateMessage(
@@ -223,8 +234,12 @@ export default function Profile() {
             <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-400" /> Resume Overview
             </h2>
-            {resumeStats ? (
-              <div>{/* Real stats go here */}</div>
+            {resumeStats || profile?.resume_url ? (
+              <div className="flex flex-col items-center gap-4">
+                <a href={profile?.resume_url} target="_blank" rel="noreferrer" className="px-4 py-2 bg-slate-800 rounded-lg text-white font-medium inline-flex items-center gap-2 border border-white/10 hover:bg-slate-700 transition-colors">
+                  <FileText className="w-4 h-4" /> View Current Resume
+                </a>
+              </div>
             ) : (
               emptyStateMessage("Resume Not Uploaded", "Upload your resume for AI analysis, ATS scoring, and personalized improvement suggestions.", "Upload Resume", FileText)
             )}
@@ -340,7 +355,7 @@ function InfoItem({ icon: Icon, label, value }: { icon: any, label: string, valu
       </div>
       <div>
         <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{label}</div>
-        <div className="text-sm font-medium text-slate-300 mt-0.5">{value}</div>
+        <div className="text-sm font-medium text-slate-300 mt-0.5 max-w-[200px] truncate">{value}</div>
       </div>
     </div>
   );

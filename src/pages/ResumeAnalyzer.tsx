@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useResumeStore } from '../store/resumeStore';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import RAHero from '../components/resume_analyzer/RAHero';
 import RAFeatures from '../components/resume_analyzer/RAFeatures';
@@ -15,9 +16,13 @@ const loadingMessages = [
 ];
 
 export default function ResumeAnalyzer() {
+  const { history, currentAnalysis } = useResumeStore();
+  const { uploadResume, saveAnalysis, fetchHistory } = useResumeStore();
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [hasResults, setHasResults] = useState(false);
+  useEffect(() => { if (currentAnalysis) setHasResults(true); }, [currentAnalysis]);
   const [loadingStep, setLoadingStep] = useState(0);
 
   useEffect(() => {
@@ -40,14 +45,24 @@ export default function ResumeAnalyzer() {
     setHasResults(false);
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!file) return;
     setIsAnalyzing(true);
     // Simulate AI processing
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      setHasResults(true);
-    }, 5500); // Wait long enough for all messages to show
+    const url = await uploadResume(file);
+    if (url) {
+      await saveAnalysis({
+        resume_url: url,
+        ats_score: 85,
+        resume_score: 92,
+        missing_skills: ['AWS', 'Docker'],
+        grammar_suggestions: ['Change "did" to "achieved"'],
+        ai_suggestions: ['Quantify your achievements']
+      });
+    }
+    
+    setIsAnalyzing(false);
+    setHasResults(true);
   };
 
   const handleReset = () => {
@@ -87,6 +102,23 @@ export default function ResumeAnalyzer() {
             
             {/* Workflow */}
             <RAWorkflow />
+            {history && history.length > 0 && (
+              <div className="mt-12 bg-slate-900 border border-white/5 rounded-3xl p-8">
+                <h3 className="text-xl font-bold text-white mb-6">Previous Analyses</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {history.map((item, i) => (
+                    <div key={i} className="p-4 bg-slate-800 rounded-xl border border-white/5 flex flex-col gap-2">
+                      <span className="text-slate-300 font-medium">Analysis from {new Date(item.upload_date || Date.now()).toLocaleDateString()}</span>
+                      <span className="text-indigo-400 font-bold">ATS Score: {item.ats_score}%</span>
+                      <button onClick={() => {
+                        useResumeStore.setState({ currentAnalysis: item });
+                        setHasResults(true);
+                      }} className="text-sm bg-indigo-500/20 text-indigo-300 py-1.5 px-3 rounded-lg hover:bg-indigo-500/30 mt-2">View Analysis</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 

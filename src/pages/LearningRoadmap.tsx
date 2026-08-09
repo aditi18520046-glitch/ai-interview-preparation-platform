@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRoadmapStore } from '../store/roadmapStore';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import RoadmapHero from '../components/roadmap/RoadmapHero';
 import RoadmapGenerator from '../components/roadmap/RoadmapGenerator';
@@ -17,7 +18,27 @@ import FloatingAIAssistant from '../components/roadmap/FloatingAIAssistant';
 import { Activity } from 'lucide-react';
 
 export default function LearningRoadmap() {
+  const { currentRoadmap, saveRoadmap, fetchHistory } = useRoadmapStore();
+  
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleGenerate = async (formData: any) => {
+    await saveRoadmap({
+      company: formData?.company || 'General',
+      job_role: formData?.role || 'Software Engineer',
+      experience_level: formData?.experience || 'Beginner',
+      generated_roadmap: { dummy: 'data' },
+      completed_topics: [],
+      remaining_topics: ['Data Structures', 'System Design'],
+      completion_percentage: 0
+    });
+    setHasRoadmap(true);
+  };
+
   const [hasRoadmap, setHasRoadmap] = useState(false);
+  useEffect(() => { if (currentRoadmap) setHasRoadmap(true); }, [currentRoadmap]);
   const [isCompleted, setIsCompleted] = useState(false);
 
   return (
@@ -46,7 +67,7 @@ export default function LearningRoadmap() {
         <RoadmapHero />
 
         {!hasRoadmap ? (
-          <RoadmapGenerator onGenerate={() => setHasRoadmap(true)} />
+          <RoadmapGenerator onGenerate={handleGenerate} />
         ) : (
           <div className="space-y-12">
             {/* Quick Stats & Analytics at the top once generated */}

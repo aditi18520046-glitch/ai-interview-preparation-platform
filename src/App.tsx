@@ -18,6 +18,9 @@ import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+
 export default function App() {
   return (
     <>
@@ -27,6 +30,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/interview" element={<MockInterview />} />
         <Route path="/dashboard/test" element={<MockTest />} />

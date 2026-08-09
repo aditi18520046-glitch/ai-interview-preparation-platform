@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useMockTestStore } from '../store/mockTestStore';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 import DashboardFooter from '../components/dashboard/DashboardFooter';
@@ -120,7 +121,45 @@ const CATEGORIES = [
 const LANGUAGES = ["English", "Hindi"];
 
 
+import { useCompanyRoleStore } from '../store/companyRoleStore';
 export default function MockTest() {
+  const { companies, fetchData } = useCompanyRoleStore();
+  useEffect(() => { fetchData(); }, [fetchData]);
+  
+  const mappedTechCompanies = companies.length ? companies.map(c => ({
+    name: c.name,
+    color: "from-slate-500 to-slate-400",
+    questions: 100,
+    diff: "Medium",
+    tag: c.description?.substring(0,10) || "General"
+  })) : COMPANIES.Technology;
+  
+  const [hasCompletedTest, setHasCompletedTest] = useState(false);
+  const { startTest, finishTest, fetchHistory, currentTest } = useMockTestStore();
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleStartTest = async () => {
+    await startTest({
+      company: selectedCompany || 'General',
+      job_role: selectedRole || 'Software Engineer',
+      questions: [],
+    });
+    setHasCompletedTest(true);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (hasCompletedTest && currentTest?.id) {
+      finishTest(currentTest.id, {
+        marks: 87,
+        percentage: 87,
+        time_taken: 3600
+      });
+    }
+  }, [hasCompletedTest, currentTest?.id]);
   
   const [companySearchQuery, setCompanySearchQuery] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
@@ -136,9 +175,8 @@ export default function MockTest() {
   const [randomQuestions, setRandomQuestions] = useState(true);
   const [aiAdaptive, setAiAdaptive] = useState(true);
 
-  const [hasCompletedTest, setHasCompletedTest] = useState(false);
 
-  const filteredTechCompanies = COMPANIES.Technology.filter(c => c.name.toLowerCase().includes(companySearchQuery.toLowerCase()));
+  const filteredTechCompanies = mappedTechCompanies.filter(c => c.name.toLowerCase().includes(companySearchQuery.toLowerCase()));
   const filteredIndianCompanies = COMPANIES.IndianProduct.filter(c => c.name.toLowerCase().includes(companySearchQuery.toLowerCase()));
   const filteredServiceCompanies = COMPANIES.Service.filter(c => c.name.toLowerCase().includes(companySearchQuery.toLowerCase()));
   
@@ -212,7 +250,7 @@ export default function MockTest() {
                          onChange={(e) => setSelectedCompany(e.target.value)}
                          className="w-full bg-slate-950/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 appearance-none hover:bg-slate-900 transition-colors cursor-pointer">
                          <option value="" disabled hidden>Company</option>
-                         {[...COMPANIES.Technology, ...COMPANIES.IndianProduct, ...COMPANIES.Service].map(c => (
+                         {[...mappedTechCompanies, ...COMPANIES.IndianProduct, ...COMPANIES.Service].map(c => (
                            <option key={c.name} value={c.name} className="bg-slate-900 text-slate-200">{c.name}</option>
                          ))}
                        </select>
@@ -285,10 +323,7 @@ export default function MockTest() {
               <div className="flex justify-center mt-8 mb-12">
                 <button 
                   disabled={!isFormComplete}
-                  onClick={() => {
-                      setHasCompletedTest(true);
-                      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                  }} 
+                  onClick={handleStartTest} 
                   className={`px-12 py-5 rounded-2xl font-bold text-lg transition-all flex items-center gap-3 shadow-xl ${
                     isFormComplete 
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-indigo-500/25 cursor-pointer' 
