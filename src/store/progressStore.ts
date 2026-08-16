@@ -38,7 +38,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
         .maybeSingle();
         
       if (!data) {
-        data = {
+        const newProgress = {
             user_id: user.id,
             overall_score: 0,
             interviews_completed: 0,
@@ -47,6 +47,13 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
             roadmap_progress: 0,
             recent_activities: []
         };
+        const { error: insertError } = await supabase.from('progress').insert([newProgress]);
+        if (!insertError) {
+           data = newProgress;
+        } else {
+           console.error('Failed to create initial progress:', insertError.message);
+           data = newProgress;
+        }
       } else if (error) { throw error; }
       
       set({ progress: data });

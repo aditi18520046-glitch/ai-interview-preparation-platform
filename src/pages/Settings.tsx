@@ -51,14 +51,14 @@ export default function Settings() {
     phone: '',
     college: '',
     branch: '',
-    graduation_year: '',
+    year: '',
     skills: '',
     linkedin: '',
     github: '',
     portfolio: '',
     career_goal: '',
     resume_url: '',
-    profile_picture: ''
+    profile_image: ''
   });
 
   useEffect(() => {
@@ -69,14 +69,14 @@ export default function Settings() {
         phone: profile.phone || '',
         college: profile.college || '',
         branch: profile.branch || '',
-        graduation_year: profile.graduation_year || '',
+        year: profile.year || '',
         skills: profile.skills || '',
         linkedin: profile.linkedin || '',
         github: profile.github || '',
         portfolio: profile.portfolio || '',
         career_goal: profile.career_goal || '',
         resume_url: profile.resume_url || '',
-        profile_picture: profile.profile_picture || ''
+        profile_image: profile.profile_image || ''
       });
     }
   }, [profile]);
@@ -140,8 +140,8 @@ export default function Settings() {
             
             <div className="flex items-center gap-6 pb-6 border-b border-white/5">
               <div className="w-20 h-20 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-slate-500 overflow-hidden relative group">
-                {formData.profile_picture ? (
-                   <img src={formData.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                {formData.profile_image ? (
+                   <img src={formData.profile_image} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-10 h-10" />
                 )}
@@ -164,7 +164,7 @@ export default function Settings() {
               <InputField label="Phone Number" type="tel" value={formData.phone} placeholder="+1 (555) 000-0000" onChange={(e) => handleInputChange('phone', e.target.value)} />
               <InputField label="College/University" value={formData.college} placeholder="University Name" onChange={(e) => handleInputChange('college', e.target.value)} />
               <InputField label="Branch" value={formData.branch} placeholder="Computer Science" onChange={(e) => handleInputChange('branch', e.target.value)} />
-              <InputField label="Graduation Year" value={formData.graduation_year} placeholder="2025" onChange={(e) => handleInputChange('graduation_year', e.target.value)} />
+              <InputField label="Graduation Year" value={formData.year} placeholder="2025" onChange={(e) => handleInputChange('year', e.target.value)} />
               <InputField label="Skills" value={formData.skills} placeholder="React, Node.js, Python" onChange={(e) => handleInputChange('skills', e.target.value)} />
               <InputField label="Career Goal" value={formData.career_goal} placeholder="e.g. Senior Software Engineer" onChange={(e) => handleInputChange('career_goal', e.target.value)} />
               <InputField label="LinkedIn Profile" value={formData.linkedin} placeholder="https://linkedin.com/in/username" onChange={(e) => handleInputChange('linkedin', e.target.value)} />

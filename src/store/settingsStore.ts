@@ -39,7 +39,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }
         
       if (!data) {
-        data = { user_id: user.id };
+        const newSettings = { user_id: user.id, theme: 'dark', language: 'en' };
+        const { error: insErr } = await supabase.from('user_settings').insert([newSettings]);
+        if (!insErr) {
+          data = newSettings;
+        } else {
+          console.error('Failed to create initial settings:', insErr.message);
+          data = newSettings;
+        }
       }
       set({ settings: data });
     } catch (error) {

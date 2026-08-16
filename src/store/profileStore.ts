@@ -8,13 +8,13 @@ export interface ProfileData {
   phone: string;
   college: string;
   branch: string;
-  graduation_year: string;
+  year: string;
   skills: string;
   linkedin: string;
   github: string;
   portfolio: string;
   resume_url: string;
-  profile_picture: string;
+  profile_image: string;
   career_goal: string;
 }
 
@@ -43,11 +43,42 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         console.error('Error fetching profile:', error.message, error.details);
       }
       
+
       if (data) {
         set({ profile: data });
       } else {
+        // Auto-create profile on first fetch if it doesn't exist
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user && session.user.id === userId) {
+            const userMeta = session.user.user_metadata || {};
+            const newProfile = {
+              id: userId,
+              full_name: userMeta.full_name || userMeta.name || session.user.email?.split('@')[0] || 'User',
+              email: session.user.email || '',
+              college: userMeta.college || '',
+              branch: userMeta.branch || '',
+              year: userMeta.year || '',
+              profile_image: null
+            };
+            
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert([newProfile]);
+              
+            if (!insertError) {
+              set({ profile: newProfile as ProfileData });
+              return; // exit early since we set it
+            } else {
+              console.error('Failed to create initial profile:', insertError.message);
+            }
+          }
+        } catch (e) {
+          console.error('Error in profile auto-creation:', e);
+        }
         set({ profile: null });
       }
+
     } catch (err) {
       console.error('Failed to fetch profile:', err);
     } finally {
@@ -93,7 +124,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         .from('profile-images')
         .getPublicUrl(filePath);
 
-      await get().updateProfile(userId, { profile_picture: data.publicUrl });
+      await get().updateProfile(userId, { profile_image: data.publicUrl });
       
       return data.publicUrl;
     } catch (error) {

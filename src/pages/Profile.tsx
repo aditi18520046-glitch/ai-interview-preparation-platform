@@ -53,8 +53,8 @@ export default function Profile() {
             <div className="max-w-2xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 overflow-hidden">
-                  {profile?.profile_picture ? (
-                    <img src={profile.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                  {profile?.profile_image ? (
+                    <img src={profile.profile_image} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-6 h-6 text-white" />
                   )}
@@ -81,8 +81,8 @@ export default function Profile() {
             
             <div className="w-64 h-64 shrink-0 rounded-2xl overflow-hidden shadow-2xl border border-white/10 relative">
               <div className="absolute inset-0 bg-indigo-500/20 mix-blend-overlay z-10" />
-              {profile?.profile_picture ? (
-                <img src={profile.profile_picture} alt="AI Career Profile" className="w-full h-full object-cover object-center" />
+              {profile?.profile_image ? (
+                <img src={profile.profile_image} alt="AI Career Profile" className="w-full h-full object-cover object-center" />
               ) : (
                 <img src={profileHero} alt="AI Career Profile" className="w-full h-full object-cover object-center" />
               )}
@@ -105,8 +105,8 @@ export default function Profile() {
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 overflow-hidden">
-                  {profile?.profile_picture ? (
-                    <img src={profile.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                  {profile?.profile_image ? (
+                    <img src={profile.profile_image} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-8 h-8" />
                   )}
@@ -121,7 +121,7 @@ export default function Profile() {
                 <InfoItem icon={Phone} label="Phone" value={profile?.phone || 'Not Added'} />
                 <InfoItem icon={GraduationCap} label="College" value={profile?.college || 'Not Added'} />
                 <InfoItem icon={BookOpen} label="Branch" value={profile?.branch || 'Not Added'} />
-                <InfoItem icon={Calendar} label="Graduation Year" value={profile?.graduation_year || 'Not Added'} />
+                <InfoItem icon={Calendar} label="Graduation Year" value={profile?.year || 'Not Added'} />
                 <InfoItem icon={Linkedin} label="LinkedIn" value={profile?.linkedin ? 'Linked' : 'Not Added'} />
                 <InfoItem icon={Github} label="GitHub" value={profile?.github ? 'Linked' : 'Not Added'} />
                 <InfoItem icon={Globe} label="Portfolio" value={profile?.portfolio ? 'Linked' : 'Not Added'} />

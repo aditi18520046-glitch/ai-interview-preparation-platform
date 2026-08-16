@@ -38,7 +38,19 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
       if (error) throw error;
       set({ entries: data || [] });
       if (user) {
-        const myEntry = data?.find((e: any) => e.user_id === user.id) || null;
+        let myEntry = data?.find((e: any) => e.user_id === user.id) || null;
+        if (!myEntry) {
+           const newEntry = { user_id: user.id, total_xp: 0, coding_score: 0, interview_score: 0, mock_test_score: 0 };
+           const { error: insErr } = await supabase.from('leaderboard').insert([newEntry]);
+           if (!insErr) {
+             myEntry = newEntry;
+             data.push(myEntry);
+             data.sort((a, b) => (b.total_xp || 0) - (a.total_xp || 0));
+             set({ entries: data.slice(0, 100) });
+           } else {
+             console.error('Failed to create initial leaderboard entry:', insErr.message);
+           }
+        }
         set({ userEntry: myEntry });
       }
     } catch (error) {
