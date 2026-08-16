@@ -35,32 +35,18 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         return;
       }
 
-      let { data, error } = await supabase
-        .from('dashboard_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Select error in dashboard_stats:', error.message, error.details, error.hint);
-      }
-
-      if (!data) {
-        const { data: newData, error: insertError } = await supabase
-          .from('dashboard_stats')
-          .insert([{ user_id: user.id }])
-          .select()
-          .maybeSingle();
-          
-        if (insertError) {
-          console.error('Could not insert into dashboard_stats:', insertError.message, insertError.details, insertError.hint);
-          // Fallback to a default object so the app doesn't break
-          data = { user_id: user.id };
-        } else {
-          data = newData || { user_id: user.id };
-        }
-      }
-
+            const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      const res = await fetch('/api/user_overview', {
+        method: 'POST',
+        headers: {
+           'Content-Type': 'application/json',
+           'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ userId: user.id })
+      });
+      const data = await res.json();
       set({ stats: data });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -74,17 +60,23 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('dashboard_stats')
-        .update(updates)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-        
-      if (error) {
-        console.error('Error updating dashboard stats:', error.message, error.details);
-        throw error;
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      const res = await fetch('/api/user_overview/update', {
+        method: 'POST',
+        headers: {
+           'Content-Type': 'application/json',
+           'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ userId: user.id, updates })
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update stats');
       }
+      const data = await res.json();
 
       set({ stats: data });
     } catch (error) {

@@ -50,7 +50,7 @@ export default function InterviewHistory() {
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
   
   const interviews = history.map((h: any) => {
-    let feedback = {};
+    let feedback: any = {};
     try {
       feedback = h.ai_feedback ? JSON.parse(h.ai_feedback) : {};
     } catch(e) {}

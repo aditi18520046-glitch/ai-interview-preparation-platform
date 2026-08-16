@@ -69,6 +69,10 @@ export default function MockInterviewWorkspace({ onEnd }: { onEnd: () => void })
          });
       }
 
+      if (!data || !data.nextQuestion) {
+        throw new Error("Invalid response format: missing nextQuestion");
+      }
+
       setTranscript(prev => [...prev, { role: 'ai', text: data.nextQuestion }]);
       
       if (currentInterview?.id) {

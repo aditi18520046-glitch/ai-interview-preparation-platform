@@ -54,7 +54,7 @@ export default function Signup() {
         password,
         options: {
           data: {
-            name,
+            full_name: name,
           }
         }
       });

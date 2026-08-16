@@ -1,4 +1,5 @@
-import React from 'react';
+import fs from 'fs';
+const code = `import React from 'react';
 import { Category } from '../../pages/Leaderboard';
 import { Shield, Code2, Database, Layout, Cloud, Brain, MessageSquare } from 'lucide-react';
 
@@ -43,16 +44,16 @@ export default function RankingTable({ category }: RankingTableProps) {
           {displayData.map((row, i) => (
             <div 
               key={i} 
-              className={`flex flex-col md:grid md:grid-cols-12 gap-4 px-6 py-4 hover:bg-white/[0.02] transition-colors items-start md:items-center ${row.isCurrentUser ? 'bg-indigo-500/5' : ''}`}
+              className={\`flex flex-col md:grid md:grid-cols-12 gap-4 px-6 py-4 hover:bg-white/[0.02] transition-colors items-start md:items-center \${row.isCurrentUser ? 'bg-indigo-500/5' : ''}\`}
             >
               {/* Rank & User Info (Mobile: Top Row) */}
               <div className="w-full md:col-span-5 flex items-center gap-4">
-                <span className={`font-bold text-lg md:text-base w-8 md:w-auto ${row.isCurrentUser ? 'text-indigo-400' : 'text-slate-500'}`}>
+                <span className={\`font-bold text-lg md:text-base w-8 md:w-auto \${row.isCurrentUser ? 'text-indigo-400' : 'text-slate-500'}\`}>
                   #{row.rank}
                 </span>
                 <div className="flex items-center gap-3">
                   <img src={row.avatar} alt={row.name} className="w-10 h-10 md:w-8 md:h-8 rounded-full" />
-                  <span className={`font-medium ${row.isCurrentUser ? 'text-indigo-400' : 'text-slate-200'}`}>
+                  <span className={\`font-medium \${row.isCurrentUser ? 'text-indigo-400' : 'text-slate-200'}\`}>
                     {row.name}
                   </span>
                 </div>
@@ -82,3 +83,5 @@ export default function RankingTable({ category }: RankingTableProps) {
     </div>
   );
 }
+`;
+fs.writeFileSync('src/components/leaderboard/RankingTable.tsx', code);

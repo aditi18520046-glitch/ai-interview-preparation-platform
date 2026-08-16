@@ -4,7 +4,7 @@ import { Trophy, Star, Shield } from 'lucide-react';
 
 interface TopChampionsProps {
   category: Category;
-  hasActivity?: boolean;
+  
 }
 
 const topUsers = [
@@ -15,16 +15,19 @@ const topUsers = [
 
 import { useLeaderboardStore } from '../../store/leaderboardStore';
 
-export default function TopChampions({ category, hasActivity }: TopChampionsProps) {
+export default function TopChampions({ category,  }: TopChampionsProps) {
   const { entries } = useLeaderboardStore();
+  
   const topUsersData = entries.length >= 3 ? [
-    { rank: 2, name: entries[1].user_id?.substring(0,8), score: entries[1].total_xp || 0, level: 'Master', badge: 'Silver', avatar: 'https://i.pravatar.cc/150?u='+1, color: 'text-slate-300', bg: 'bg-slate-300', from: 'from-slate-400', to: 'to-slate-300' },
-    { rank: 1, name: entries[0].user_id?.substring(0,8), score: entries[0].total_xp || 0, level: 'Grandmaster', badge: 'Gold', avatar: 'https://i.pravatar.cc/150?u='+0, color: 'text-yellow-400', bg: 'bg-yellow-400', from: 'from-yellow-500', to: 'to-yellow-300' },
-    { rank: 3, name: entries[2].user_id?.substring(0,8), score: entries[2].total_xp || 0, level: 'Diamond', badge: 'Bronze', avatar: 'https://i.pravatar.cc/150?u='+2, color: 'text-orange-500', bg: 'bg-orange-500', from: 'from-orange-600', to: 'to-orange-400' },
-  ] : topUsers;
+    { rank: 2, name: entries[1].user_id?.substring(0,8), score: entries[1].total_xp || 0, level: 'Master', badge: 'Silver', avatar: 'https://ui-avatars.com/api/?name='+entries[1].user_id?.substring(0,2), color: 'text-slate-300', bg: 'bg-slate-300', from: 'from-slate-400', to: 'to-slate-300' },
+    { rank: 1, name: entries[0].user_id?.substring(0,8), score: entries[0].total_xp || 0, level: 'Grandmaster', badge: 'Gold', avatar: 'https://ui-avatars.com/api/?name='+entries[0].user_id?.substring(0,2), color: 'text-yellow-400', bg: 'bg-yellow-400', from: 'from-yellow-500', to: 'to-yellow-300' },
+    { rank: 3, name: entries[2].user_id?.substring(0,8), score: entries[2].total_xp || 0, level: 'Diamond', badge: 'Bronze', avatar: 'https://ui-avatars.com/api/?name='+entries[2].user_id?.substring(0,2), color: 'text-orange-500', bg: 'bg-orange-500', from: 'from-orange-600', to: 'to-orange-400' },
+  ] : [];
+  if (topUsersData.length === 0) return null;
+
   if (category === 'skills') return null; // Skills has a different layout rendered in RankingTable
 
-  if (!hasActivity) return null;
+  
 
   return (
     <div className="bg-slate-900 border border-white/5 rounded-[32px] p-6 md:p-8">

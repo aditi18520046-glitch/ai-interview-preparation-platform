@@ -39,18 +39,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }
         
       if (!data) {
-        const { data: newData, error: insertError } = await supabase
-          .from('user_settings')
-          .insert([{ user_id: user.id }])
-          .select()
-          .maybeSingle();
-          
-        if (insertError) {
-          console.warn('Could not insert settings:', insertError);
-          data = { user_id: user.id };
-        } else {
-          data = newData || { user_id: user.id };
-        }
+        data = { user_id: user.id };
       }
       set({ settings: data });
     } catch (error) {
@@ -66,8 +55,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('user_settings')
-        .update(updates)
-        .eq('user_id', user.id)
+        .upsert({ user_id: user.id, ...updates }, { onConflict: 'user_id' })
         .select()
         .maybeSingle();
       if (error) {

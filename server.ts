@@ -74,7 +74,7 @@ Context: Interviewing for ${config.difficulty} ${config.job_role} at ${config.co
       fullPrompt += prompt;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-1.5-flash',
         contents: fullPrompt,
         config: {
             temperature: 0.7,
@@ -146,7 +146,7 @@ Generate a final evaluation strictly in the following JSON format:
 }`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-1.5-flash',
         contents: fullPrompt,
         config: {
             temperature: 0.7,
@@ -177,6 +177,67 @@ Generate a final evaluation strictly in the following JSON format:
     }
   });
 
+
+  
+  // Proxy for dashboard_stats to bypass adblockers
+  app.post('/api/user_overview', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({error: 'Unauthorized'});
+      
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } }
+      });
+
+      let { data, error } = await supabase
+        .from('dashboard_stats')
+        .select('*')
+        .eq('user_id', req.body.userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (!data) {
+        const { data: newData, error: insertError } = await supabase
+          .from('dashboard_stats')
+          .insert([{ user_id: req.body.userId }])
+          .select()
+          .maybeSingle();
+        if (insertError) {
+           data = { user_id: req.body.userId };
+        } else {
+           data = newData;
+        }
+      }
+      res.json(data);
+    } catch (e) {
+      res.status(500).json({error: e.message});
+    }
+  });
+
+  app.post('/api/user_overview/update', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({error: 'Unauthorized'});
+      
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } }
+      });
+
+      const { data, error } = await supabase
+        .from('dashboard_stats')
+        .upsert({ user_id: req.body.userId, ...req.body.updates }, { onConflict: 'user_id' })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      res.json(data);
+    } catch (e) {
+      res.status(500).json({error: e.message});
+    }
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

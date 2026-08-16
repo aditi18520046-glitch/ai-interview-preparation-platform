@@ -59,7 +59,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     try {
       const { error } = await supabase
         .from('profiles')
-        .upsert({ id: userId, ...data });
+        .upsert({ id: userId, ...data }, { onConflict: 'id' });
         
       if (error) {
         console.error('Error updating profile:', error.message, error.details);

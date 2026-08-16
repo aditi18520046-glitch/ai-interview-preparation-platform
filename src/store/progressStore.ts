@@ -35,13 +35,10 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
         .from('progress')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
         
-      if (error && error.code === 'PGRST116') {
-        // Not found, create one
-        const { data: newProgress, error: insertError } = await supabase
-          .from('progress')
-          .insert([{
+      if (!data) {
+        data = {
             user_id: user.id,
             overall_score: 0,
             interviews_completed: 0,
@@ -49,15 +46,8 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
             coding_problems_solved: 0,
             roadmap_progress: 0,
             recent_activities: []
-          }])
-          .select()
-          .single();
-          
-        if (insertError) throw insertError;
-        data = newProgress;
-      } else if (error) {
-        throw error;
-      }
+        };
+      } else if (error) { throw error; }
       
       set({ progress: data });
     } catch (error) {
@@ -122,10 +112,9 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
 
       const { data, error } = await supabase
         .from('progress')
-        .update(updates)
-        .eq('user_id', user.id)
+        .upsert({ user_id: user.id, ...updates }, { onConflict: 'user_id' })
         .select()
-        .single();
+        .maybeSingle();
         
       if (error) throw error;
       set({ progress: data });
