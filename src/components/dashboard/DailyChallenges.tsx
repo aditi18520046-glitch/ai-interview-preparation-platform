@@ -10,7 +10,15 @@ const CHALLENGES = [
 ];
 
 export default function DailyChallenges() {
-  const { hasData } = useDashboardData();
+
+  const { hasData, stats } = useDashboardData();
+  
+  const CHALLENGES_DYNAMIC = [
+    { id: 1, title: 'Complete 1 Mock Interview', xp: 500, completed: (stats.interviews || 0) >= 1, icon: Target, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+    { id: 2, title: 'Solve 2 Coding Problems', xp: 300, completed: (stats.coding || 0) >= 2, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    { id: 3, title: 'Upload Your Resume', xp: 200, completed: (stats.resumeScore || 0) > 0, icon: Play, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+  ];
+
 
   return (
     <div className="mb-8">
@@ -23,8 +31,8 @@ export default function DailyChallenges() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {CHALLENGES.map((challenge, idx) => {
-          const isCompleted = hasData && challenge.completed;
+        {CHALLENGES_DYNAMIC.map((challenge, idx) => {
+          const isCompleted = challenge.completed;
           return (
             <motion.div
               key={challenge.id}

@@ -46,3 +46,9 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(99, 102, 241, 0.8);
   }
+
+/* Focus Mode: Hide user-selected elements */
+div#root:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1),
+div#root:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(4) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) {
+  display: none !important;
+}

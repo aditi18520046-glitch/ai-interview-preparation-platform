@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
+import { useDashboardStore } from './dashboardStore';
 
 export interface ResumeAnalysis {
   id?: string;
@@ -70,15 +72,24 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
         ai_suggestions: data.ai_suggestions || []
       };
 
-      const { data: inserted, error } = await supabase
-        .from('resume_analysis')
-        .insert([newAnalysis])
-        .select()
-        .single();
+      const inserted = await db.collection('resume_analysis').insert(newAnalysis);
+      const error = null;
 
       if (error) throw error;
+
       set({ currentAnalysis: inserted });
       get().fetchHistory();
+      
+      try {
+        const currentStats = useDashboardStore.getState().stats;
+        await useDashboardStore.getState().updateStats({
+           resume_uploaded: (currentStats?.resume_uploaded || 0) + 1,
+           total_xp: (currentStats?.total_xp || 0) + 10 // small XP boost for resume upload
+        });
+      } catch (e) {
+        console.error('Failed to update stats after resume analysis', e);
+      }
+
     } catch (error) {
       console.error('Error saving resume analysis:', error);
     } finally {
@@ -92,11 +103,8 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('resume_analysis')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('upload_date', { ascending: false });
+      const data = await db.collection('resume_analysis').find({ user_id: user.id }, { sort: { upload_date: -1 } });
+      const error = null;
         
       if (error) throw error;
       set({ history: data || [] });

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 
 export interface DashboardStats {
   id?: string;
@@ -38,16 +39,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
             const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
-      const res = await fetch('/api/user_overview', {
-        method: 'POST',
-        headers: {
-           'Content-Type': 'application/json',
-           'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ userId: user.id })
-      });
-      const data = await res.json();
-      set({ stats: data });
+      const data = await db.collection('dashboard_stats').findOne({});
+      set({ stats: data || { user_id: user.id } });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
@@ -63,21 +56,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
-      const res = await fetch('/api/user_overview/update', {
-        method: 'POST',
-        headers: {
-           'Content-Type': 'application/json',
-           'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ userId: user.id, updates })
-      });
-      
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to update stats');
-      }
-      const data = await res.json();
-
+      const data = await db.collection('dashboard_stats').upsert({}, updates);
       set({ stats: data });
     } catch (error) {
       console.error('Error in updateStats:', error);

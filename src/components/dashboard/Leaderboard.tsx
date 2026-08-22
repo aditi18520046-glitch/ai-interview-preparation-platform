@@ -2,9 +2,26 @@ import React from 'react';
 import { Trophy, TrendingUp, Zap, ChevronRight, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { useLeaderboardStore } from '../../store/leaderboardStore';
+import { useEffect } from 'react';
 
 export default function Leaderboard() {
+
   const { hasData, stats } = useDashboardData();
+  const fetchLeaderboard = useLeaderboardStore(state => state.fetchLeaderboard);
+  const entries = useLeaderboardStore(state => state.entries);
+  const userEntry = useLeaderboardStore(state => state.userEntry);
+  
+  useEffect(() => {
+    if (hasData) {
+      fetchLeaderboard();
+    }
+  }, [hasData, fetchLeaderboard]);
+  
+  const rank = entries.findIndex(e => e.id === userEntry?.id) + 1;
+  const displayRank = rank > 0 ? `#${rank}` : '--';
+  const topPercent = rank > 0 ? Math.max(1, Math.round((rank / Math.max(1, entries.length)) * 100)) : 100;
+
 
   return (
     <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[20px] p-6 h-full min-h-[280px] flex flex-col relative overflow-hidden group shadow-sm">
@@ -29,15 +46,13 @@ export default function Leaderboard() {
             <div className="flex flex-col">
               <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Current Rank</span>
               <span className="text-3xl font-bold text-white flex items-baseline gap-2 tracking-tight">
-                #42 
-                <span className="text-xs font-medium text-emerald-400 flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                  <TrendingUp className="w-3 h-3 mr-0.5" /> 12
-                </span>
+                {displayRank} 
+               
               </span>
             </div>
             
             <div className="w-14 h-14 rounded-full border-4 border-yellow-400/20 border-t-yellow-400 flex items-center justify-center relative">
-              <span className="text-[10px] font-bold text-yellow-400">Top 5%</span>
+              <span className="text-[10px] font-bold text-yellow-400">Top {topPercent}%</span>
             </div>
           </div>
 

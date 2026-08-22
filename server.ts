@@ -1,3 +1,5 @@
+import { MongoClient, ServerApiVersion } from 'mongodb';
+import crypto from 'crypto';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
@@ -5,6 +7,99 @@ import { GoogleGenAI } from '@google/genai';
 
 async function startServer() {
   const app = express();
+
+// MongoDB Setup
+const mongoUri = process.env.MONGODB_URI;
+let mongoClient;
+let db;
+
+if (mongoUri) {
+  mongoClient = new MongoClient(mongoUri, {
+    serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
+  });
+  mongoClient.connect().then(() => {
+    db = mongoClient.db('ai_interview');
+    console.log("Connected to MongoDB Atlas");
+  }).catch(console.error);
+}
+
+// Auth Middleware
+const requireAuth = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Unauthorized' });
+  const token = authHeader.replace('Bearer ', '');
+  const { createClient } = await import('@supabase/supabase-js');
+  const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return res.status(401).json({ error: 'Invalid token' });
+  req.user = user;
+  next();
+};
+
+// Generic MongoDB Router
+app.post('/api/db', requireAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ error: 'DB not connected' });
+  try {
+    const { collection, operation, filter = {}, data = {}, sort, limit } = req.body;
+    const col = db.collection(collection);
+
+    // Security: Force user_id on all filters
+    const safeFilter = { ...filter, user_id: req.user.id };
+    const safeData = { ...data };
+    delete safeData._id; // prevent overriding MongoDB _id
+
+    if (operation === 'find') {
+      let cursor = col.find(safeFilter);
+      if (sort) cursor = cursor.sort(sort);
+      if (limit) cursor = cursor.limit(limit);
+      const result = await cursor.toArray();
+      res.json(result);
+    } else if (operation === 'findOne') {
+      const result = await col.findOne(safeFilter);
+      res.json(result);
+    } else if (operation === 'insertOne') {
+      safeData.user_id = req.user.id;
+      safeData.id = safeData.id || crypto.randomUUID();
+      safeData.created_at = safeData.created_at || new Date().toISOString();
+      await col.insertOne(safeData);
+      res.json(safeData); // return the inserted doc
+    } else if (operation === 'updateOne') {
+      const updateDoc = { $set: { ...safeData, updated_at: new Date().toISOString() } };
+      const r = await col.findOneAndUpdate(safeFilter, updateDoc, { returnDocument: 'after' });
+      res.json(r || null);
+    } else if (operation === 'upsert') {
+      const updateDoc = {
+        $set: { ...safeData, user_id: req.user.id, updated_at: new Date().toISOString() },
+        $setOnInsert: { id: filter.id || crypto.randomUUID(), created_at: new Date().toISOString() }
+      };
+      const r = await col.findOneAndUpdate(safeFilter, updateDoc, { returnDocument: 'after', upsert: true });
+      res.json(r || null);
+    } else if (operation === 'deleteOne') {
+      await col.deleteOne(safeFilter);
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: 'Invalid operation' });
+    }
+  } catch (err) {
+    console.error('DB Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/leaderboard', async (req, res) => {
+  if (!db) return res.status(500).json({ error: 'DB not connected' });
+  try {
+    const top = await db.collection('dashboard_stats')
+      .find({ total_xp: { $gt: 0 } })
+      .sort({ total_xp: -1 })
+      .limit(10)
+      .toArray();
+    res.json(top);
+  } catch(e) {
+    res.status(500).json({error: e.message});
+  }
+});
+
   const PORT = 3000;
 
   app.use(express.json());

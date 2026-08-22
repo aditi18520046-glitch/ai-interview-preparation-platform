@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
+import { useDashboardStore } from './dashboardStore';
+import { useProgressStore } from './progressStore';
 
 export interface CodingSubmission {
   id?: string;
@@ -47,12 +50,24 @@ export const useCodingStore = create<CodingState>((set, get) => ({
         score: data.score || 0
       };
 
-      const { error } = await supabase
-        .from('coding_submissions')
-        .insert([newSubmission]);
+      const error = null;
+      await db.collection('coding_submissions').insert(newSubmission);
 
       if (error) throw error;
+
       get().fetchHistory();
+      
+      try {
+        const currentStats = useDashboardStore.getState().stats;
+        await useDashboardStore.getState().updateStats({
+           coding_questions_solved: (currentStats?.coding_questions_solved || 0) + 1,
+           total_xp: (currentStats?.total_xp || 0) + (data.score || 0)
+        });
+        await useProgressStore.getState().updateProgress();
+      } catch (e) {
+        console.error('Failed to update stats after coding', e);
+      }
+
     } catch (error) {
       console.error('Error submitting code:', error);
     } finally {
@@ -66,11 +81,8 @@ export const useCodingStore = create<CodingState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('coding_submissions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const data = await db.collection('coding_submissions').find({ user_id: user.id }, { sort: { created_at: -1 } });
+      const error = null;
         
       if (error) throw error;
       set({ history: data || [] });

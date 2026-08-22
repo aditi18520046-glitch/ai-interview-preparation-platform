@@ -24,7 +24,7 @@ export default function Progress() {
   }, [fetchProgress, updateProgress]);
 
   const [hasActivity, setHasActivity] = useState(false);
-  useEffect(() => { if (progress) setHasActivity(true); }, [progress]);
+  useEffect(() => { if (progress && (progress.interviews_completed > 0 || progress.mock_tests_completed > 0 || progress.coding_problems_solved > 0 || progress.overall_score > 0)) setHasActivity(true); else setHasActivity(false); }, [progress]);
 
   return (
     <DashboardLayout>

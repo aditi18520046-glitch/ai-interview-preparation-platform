@@ -1,6 +1,8 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { useInterviewStore } from '../../store/interviewStore';
+import { useEffect } from 'react';
 import { Lock } from 'lucide-react';
 
 const INTERVIEW_DATA = [
@@ -25,7 +27,27 @@ const WEAKNESS_DATA = [
 ];
 
 export default function Analytics() {
+
   const { hasData } = useDashboardData();
+  const history = useInterviewStore(state => state.history);
+  const fetchHistory = useInterviewStore(state => state.fetchHistory);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const dynamicInterviewData = history.slice(0, 4).reverse().map((h, i) => ({
+    name: `Int ${i+1}`,
+    score: h.final_score || 0
+  }));
+
+  const dynamicSkillData = [
+    { name: 'Algorithms', value: 85 },
+    { name: 'System Design', value: 70 },
+    { name: 'Communication', value: 92 },
+    { name: 'Problem Solving', value: 88 },
+  ];
+
 
   if (!hasData) {
     return (
@@ -59,7 +81,7 @@ export default function Analytics() {
         
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={INTERVIEW_DATA} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+            <LineChart data={dynamicInterviewData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
               <XAxis dataKey="name" stroke="#ffffff40" fontSize={11} tickLine={false} axisLine={false} />
               <YAxis stroke="#ffffff40" fontSize={11} tickLine={false} axisLine={false} />
@@ -88,7 +110,7 @@ export default function Analytics() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={SKILL_DATA}
+                  data={[]}
                   cx="50%"
                   cy="50%"
                   innerRadius={30}
@@ -113,7 +135,7 @@ export default function Analytics() {
           <h3 className="text-sm font-semibold text-white mb-4">Areas to Improve</h3>
           <div className="h-32 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={WEAKNESS_DATA} layout="vertical" margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <BarChart data={[]} layout="vertical" margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" stroke="#ffffff60" fontSize={10} tickLine={false} axisLine={false} />
                 <Tooltip 

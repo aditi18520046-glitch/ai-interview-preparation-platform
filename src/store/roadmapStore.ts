@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
+import { useProgressStore } from './progressStore';
 
 export interface LearningRoadmap {
   id?: string;
@@ -48,11 +50,8 @@ export const useRoadmapStore = create<RoadmapState>((set, get) => ({
         completion_percentage: data.completion_percentage || 0
       };
 
-      const { data: inserted, error } = await supabase
-        .from('learning_roadmap')
-        .insert([newRoadmap])
-        .select()
-        .single();
+      const inserted = await db.collection('learning_roadmap').insert(newRoadmap);
+      const error = null;
 
       if (error) throw error;
       set({ currentRoadmap: inserted });
@@ -66,16 +65,19 @@ export const useRoadmapStore = create<RoadmapState>((set, get) => ({
 
   updateProgress: async (id, updates) => {
     try {
-      const { data, error } = await supabase
-        .from('learning_roadmap')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const data = await db.collection('learning_roadmap').update({ id }, updates);
+      const error = null;
         
       if (error) throw error;
+
       set({ currentRoadmap: data });
       get().fetchHistory();
+      try {
+         await useProgressStore.getState().updateProgress();
+      } catch (e) {
+         console.error('Failed to update progress after roadmap update', e);
+      }
+
     } catch (error) {
       console.error('Error updating roadmap:', error);
     }
@@ -87,11 +89,8 @@ export const useRoadmapStore = create<RoadmapState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('learning_roadmap')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const data = await db.collection('learning_roadmap').find({ user_id: user.id }, { sort: { created_at: -1 } });
+      const error = null;
         
       if (error) throw error;
       set({ history: data || [] });

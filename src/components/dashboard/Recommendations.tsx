@@ -19,7 +19,7 @@ export default function Recommendations() {
       </div>
 
       <div className="space-y-3 flex-1 overflow-y-auto pr-2 scrollbar-hide flex flex-col">
-        {!hasData ? (
+        {(!hasData) ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center mb-3 border border-white/5">
               <Sparkles className="w-5 h-5 text-slate-500" />

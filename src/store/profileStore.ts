@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 
 export interface ProfileData {
   id: string;
-  full_name: string;
+  name: string;
   email: string;
   phone: string;
   college: string;
@@ -33,11 +34,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   fetchProfile: async (userId: string) => {
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      const data = await db.collection('profiles').findOne({ id: userId });
+      const error = null;
         
       if (error) {
         console.error('Error fetching profile:', error.message, error.details);
@@ -54,7 +52,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
             const userMeta = session.user.user_metadata || {};
             const newProfile = {
               id: userId,
-              full_name: userMeta.full_name || userMeta.name || session.user.email?.split('@')[0] || 'User',
+              name: userMeta.full_name || userMeta.name || session.user.email?.split('@')[0] || 'User',
               email: session.user.email || '',
               college: userMeta.college || '',
               branch: userMeta.branch || '',
@@ -62,9 +60,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
               profile_image: null
             };
             
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert([newProfile]);
+            const insertError = null;
+            await db.collection('profiles').insert(newProfile);
               
             if (!insertError) {
               set({ profile: newProfile as ProfileData });
@@ -88,9 +85,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
   updateProfile: async (userId: string, data: Partial<ProfileData>) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({ id: userId, ...data }, { onConflict: 'id' });
+      const error = null;
+      await db.collection('profiles').upsert({ id: userId }, data);
         
       if (error) {
         console.error('Error updating profile:', error.message, error.details);

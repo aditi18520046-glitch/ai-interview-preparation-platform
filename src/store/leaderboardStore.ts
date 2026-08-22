@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 
 export interface LeaderboardEntry {
@@ -29,11 +30,10 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
     const user = useAuthStore.getState().user;
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('leaderboard')
-        .select('*')
-        .order('total_xp', { ascending: false })
-        .limit(100);
+      // Note: Since leaderboard needs all users, we created a custom route for it
+      const res = await fetch('/api/leaderboard');
+      const data = await res.json();
+      const error = null;
         
       if (error) throw error;
       set({ entries: data || [] });
@@ -41,7 +41,8 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
         let myEntry = data?.find((e: any) => e.user_id === user.id) || null;
         if (!myEntry) {
            const newEntry = { user_id: user.id, total_xp: 0, coding_score: 0, interview_score: 0, mock_test_score: 0 };
-           const { error: insErr } = await supabase.from('leaderboard').insert([newEntry]);
+           const insErr = null;
+           await db.collection('leaderboard').insert(newEntry);
            if (!insErr) {
              myEntry = newEntry;
              data.push(myEntry);
@@ -65,20 +66,14 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
     if (!user) return;
 
     try {
-      let { data: existing } = await supabase
-        .from('leaderboard')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      let existing = await db.collection('leaderboard').findOne({ user_id: user.id });
 
       if (!existing) {
-        const { error: insErr } = await supabase.from('leaderboard').insert([{ user_id: user.id, ...updates }]);
+        const insErr = null;
+        await db.collection('leaderboard').insert({ user_id: user.id, ...updates });
         if (insErr) console.warn('Could not insert leaderboard:', insErr);
       } else {
-        await supabase
-          .from('leaderboard')
-          .update(updates)
-          .eq('user_id', user.id);
+        await db.collection('leaderboard').update({ user_id: user.id }, updates);
       }
       get().fetchLeaderboard();
     } catch (error) {

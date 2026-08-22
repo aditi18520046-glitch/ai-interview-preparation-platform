@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
+import { useDashboardStore } from './dashboardStore';
+import { useProgressStore } from './progressStore';
 
 export interface MockTest {
   id?: string;
@@ -52,11 +55,8 @@ export const useMockTestStore = create<MockTestState>((set, get) => ({
         status: 'in_progress'
       };
 
-      const { data: inserted, error } = await supabase
-        .from('mock_tests')
-        .insert([newTest])
-        .select()
-        .single();
+      const inserted = await db.collection('mock_tests').insert(newTest);
+      const error = null;
 
       if (error) throw error;
       set({ currentTest: inserted });
@@ -69,12 +69,8 @@ export const useMockTestStore = create<MockTestState>((set, get) => ({
 
   updateTest: async (id, updates) => {
     try {
-      const { data, error } = await supabase
-        .from('mock_tests')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const data = await db.collection('mock_tests').update({ id }, updates);
+      const error = null;
         
       if (error) throw error;
       set({ currentTest: data });
@@ -85,19 +81,28 @@ export const useMockTestStore = create<MockTestState>((set, get) => ({
 
   finishTest: async (id, data) => {
     try {
-      const { data: updated, error } = await supabase
-        .from('mock_tests')
-        .update({
+      const updated = await db.collection('mock_tests').update({ id }, {
           ...data,
           status: 'completed'
-        })
-        .eq('id', id)
-        .select()
-        .single();
+        });
+      const error = null;
         
       if (error) throw error;
+
       set({ currentTest: null });
       get().fetchHistory();
+      
+      try {
+        const currentStats = useDashboardStore.getState().stats;
+        await useDashboardStore.getState().updateStats({
+           mock_tests_completed: (currentStats?.mock_tests_completed || 0) + 1,
+           total_xp: (currentStats?.total_xp || 0) + Math.round(data.percentage || 0)
+        });
+        await useProgressStore.getState().updateProgress();
+      } catch (e) {
+        console.error('Failed to update stats after mock test', e);
+      }
+
     } catch (error) {
       console.error('Error finishing mock test:', error);
     }
@@ -109,11 +114,8 @@ export const useMockTestStore = create<MockTestState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('mock_tests')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const data = await db.collection('mock_tests').find({ user_id: user.id }, { sort: { created_at: -1 } });
+      const error = null;
         
       if (error) throw error;
       set({ history: data || [] });

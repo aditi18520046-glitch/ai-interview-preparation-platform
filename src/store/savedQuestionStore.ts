@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 
 export interface SavedQuestion {
@@ -29,10 +30,8 @@ export const useSavedQuestionStore = create<SavedQuestionState>((set, get) => ({
     if (!user) return;
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('saved_questions')
-        .select('*')
-        .eq('user_id', user.id);
+      const data = await db.collection('saved_questions').find({ user_id: user.id });
+      const error = null;
       if (error) throw error;
       set({ savedQuestions: data || [] });
     } catch (error) {
@@ -46,7 +45,7 @@ export const useSavedQuestionStore = create<SavedQuestionState>((set, get) => ({
     const user = useAuthStore.getState().user;
     if (!user) return;
     try {
-      await supabase.from('saved_questions').insert([{ ...question, user_id: user.id }]);
+      await db.collection('saved_questions').insert({ ...question, user_id: user.id });
       get().fetchSaved();
     } catch (error) {
       console.error('Error saving question:', error);
@@ -55,7 +54,7 @@ export const useSavedQuestionStore = create<SavedQuestionState>((set, get) => ({
 
   removeQuestion: async (id) => {
     try {
-      await supabase.from('saved_questions').delete().eq('id', id);
+      await db.collection('saved_questions').delete({ id });
       get().fetchSaved();
     } catch (error) {
       console.error('Error removing question:', error);

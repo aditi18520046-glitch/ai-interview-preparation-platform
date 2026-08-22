@@ -1,6 +1,10 @@
 import React from 'react';
 import { CheckCircle2, PlayCircle, FileText, Code2, Users, History } from 'lucide-react';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { useInterviewStore } from '../../store/interviewStore';
+import { useMockTestStore } from '../../store/mockTestStore';
+import { useCodingStore } from '../../store/codingStore';
+import { useEffect } from 'react';
 
 const ACTIVITIES = [
   { title: 'Completed Google Mock Interview', time: '2 hours ago', icon: PlayCircle, color: 'text-indigo-400', score: '92%' },
@@ -10,13 +14,33 @@ const ACTIVITIES = [
 ];
 
 export default function Activity() {
+
   const { hasData } = useDashboardData();
+  const interviewHistory = useInterviewStore(state => state.history);
+  const fetchInterviews = useInterviewStore(state => state.fetchHistory);
+  const testHistory = useMockTestStore(state => state.history);
+  const fetchTests = useMockTestStore(state => state.fetchHistory);
+  const codingHistory = useCodingStore(state => state.history);
+  const fetchCoding = useCodingStore(state => state.fetchHistory);
+
+  useEffect(() => {
+    fetchInterviews();
+    fetchTests();
+    fetchCoding();
+  }, [fetchInterviews, fetchTests, fetchCoding]);
+
+  const activities = [
+    ...interviewHistory.map(i => ({ title: `Mock Interview: ${i.job_role}`, time: new Date(i.start_time).toLocaleDateString(), icon: PlayCircle, color: 'text-indigo-400', score: i.final_score ? `${i.final_score}%` : null, ts: new Date(i.start_time).getTime() })),
+    ...testHistory.map(t => ({ title: `Mock Test: ${t.job_role}`, time: new Date(t.created_at || Date.now()).toLocaleDateString(), icon: FileText, color: 'text-emerald-400', score: t.percentage ? `${Math.round(t.percentage)}%` : null, ts: new Date(t.created_at || Date.now()).getTime() })),
+    ...codingHistory.map(c => ({ title: `Solved: ${c.question}`, time: new Date(c.created_at || Date.now()).toLocaleDateString(), icon: Code2, color: 'text-fuchsia-400', score: c.score ? `${c.score}XP` : null, ts: new Date(c.created_at || Date.now()).getTime() }))
+  ].sort((a, b) => b.ts - a.ts).slice(0, 5);
+
 
   return (
     <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[20px] p-6 h-full min-h-[320px] flex flex-col shadow-sm">
       <h2 className="text-base font-semibold text-white mb-5">Recent Activity</h2>
       
-      {!hasData ? (
+      {!hasData || activities.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center mb-3 border border-white/5">
             <History className="w-5 h-5 text-slate-500" />
@@ -31,7 +55,7 @@ export default function Activity() {
             <div className="absolute left-3.5 top-2 bottom-2 w-px bg-white/10" />
             
             <div className="space-y-5 relative">
-              {ACTIVITIES.map((activity, idx) => (
+              {activities.map((activity, idx) => (
                 <div key={idx} className="flex items-start gap-4 group cursor-pointer">
                   <div className="relative z-10 w-7 h-7 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center shrink-0 group-hover:border-white/30 transition-colors">
                     <activity.icon className={`w-3.5 h-3.5 ${activity.color}`} />

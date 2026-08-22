@@ -43,7 +43,7 @@ export default function ProgressOverview({ hasActivity }: { hasActivity?: boolea
     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, i) => {
         const displayCurrent = hasActivity ? stat.current : null;
-        const displayPrevious = hasActivity ? stat.previous : null;
+        const displayPrevious = null; // Removed fake previous data
         const improvement = displayCurrent !== null && displayPrevious !== null ? displayCurrent - displayPrevious : 0;
         const isPositive = improvement > 0;
         const isNeutral = improvement === 0;

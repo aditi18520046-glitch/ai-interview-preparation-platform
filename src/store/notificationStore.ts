@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 
 export interface Notification {
@@ -30,11 +31,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     if (!user) return;
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const data = await db.collection('notifications').find({ user_id: user.id }, { sort: { created_at: -1 } });
+      const error = null;
       if (error) throw error;
       set({ notifications: data || [] });
     } catch (error) {
@@ -46,7 +44,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   markAsRead: async (id) => {
     try {
-      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+      await db.collection('notifications').update({ id }, { is_read: true });
       get().fetchNotifications();
     } catch (error) {
       console.error('Error marking as read:', error);
@@ -55,7 +53,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   deleteNotification: async (id) => {
     try {
-      await supabase.from('notifications').delete().eq('id', id);
+      await db.collection('notifications').delete({ id });
       get().fetchNotifications();
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -66,13 +64,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     const user = useAuthStore.getState().user;
     if (!user) return;
     try {
-      await supabase.from('notifications').insert([{
+      await db.collection('notifications').insert({
         user_id: user.id,
         title,
         message,
         type,
         is_read: false
-      }]);
+      });
       get().fetchNotifications();
     } catch (error) {
       console.error('Error creating notification:', error);

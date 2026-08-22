@@ -135,31 +135,44 @@ export default function MockTest() {
   })) : COMPANIES.Technology;
   
   const [hasCompletedTest, setHasCompletedTest] = useState(false);
+  const [isStarted, setIsStarted] = useState(false);
+  const [testScore, setTestScore] = useState<number | null>(null);
   const { startTest, finishTest, fetchHistory, currentTest } = useMockTestStore();
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
 
+
   const handleStartTest = async () => {
-    await startTest({
-      company: selectedCompany || 'General',
-      job_role: selectedRole || 'Software Engineer',
-      questions: [],
-    });
-    setHasCompletedTest(true);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    try {
+      await startTest({
+        company: selectedCompany || 'General',
+        job_role: selectedRole || 'Software Engineer',
+        questions: [],
+      });
+      setIsStarted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {
+      alert("Failed to start test. Please check your connection.");
+    }
   };
 
-  useEffect(() => {
-    if (hasCompletedTest && currentTest?.id) {
-      finishTest(currentTest.id, {
-        marks: 87,
-        percentage: 87,
-        time_taken: 3600
+  const handleFinishTest = async () => {
+    if (currentTest?.id) {
+      const generatedScore = Math.floor(Math.random() * 40) + 60; // Just for simulating an active test score, but ideally user answers questions.
+      await finishTest(currentTest.id, {
+        marks: generatedScore,
+        percentage: generatedScore,
+        time_taken: 1800
       });
+      setTestScore(generatedScore);
+      setIsStarted(false);
+      setHasCompletedTest(true);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
-  }, [hasCompletedTest, currentTest?.id]);
+  };
+
   
   const [companySearchQuery, setCompanySearchQuery] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
@@ -181,6 +194,28 @@ export default function MockTest() {
   const filteredServiceCompanies = COMPANIES.Service.filter(c => c.name.toLowerCase().includes(companySearchQuery.toLowerCase()));
   
   const isFormComplete = selectedCompany && selectedRole && selectedDifficulty && selectedLanguage && timeLimit;
+
+
+  if (isStarted) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-4xl mx-auto space-y-6 pt-10">
+          <div className="bg-slate-900 border border-indigo-500/30 rounded-3xl p-8">
+            <h2 className="text-2xl font-bold text-white mb-4">Mock Test In Progress: {selectedCompany} - {selectedRole}</h2>
+            <p className="text-slate-400 mb-8">Please answer the questions presented by the system. (Placeholder for test workspace)</p>
+            <div className="flex justify-end">
+              <button 
+                onClick={handleFinishTest}
+                className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-bold transition-all"
+              >
+                Submit Answers
+              </button>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -492,32 +527,27 @@ export default function MockTest() {
               )}
 
               {/* 5. Performance History */}
-              {hasCompletedTest && (
+
+              {hasCompletedTest && testScore !== null && (
                 <div className="mb-16">
                    <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-2">
-                     <History className="w-6 h-6 text-slate-400" /> Performance History
+                     <History className="w-6 h-6 text-slate-400" /> Recent Result
                    </h2>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     {[
-                       { co: 'Amazon', role: 'SDE II', score: '82%', date: '2 days ago', diff: 'Hard', acc: '85%' },
-                       { co: 'Microsoft', role: 'Backend', score: '91%', date: '5 days ago', diff: 'Medium', acc: '94%' }
-                     ].map((hist, i) => (
-                       <div key={i} className="bg-slate-900/40 border border-white/5 rounded-2xl p-6 flex justify-between items-center hover:bg-slate-800/60 transition-colors group">
+                   <div className="grid grid-cols-1 gap-6">
+                       <div className="bg-slate-900/40 border border-emerald-500/30 rounded-2xl p-6 flex justify-between items-center hover:bg-slate-800/60 transition-colors group">
                           <div className="flex items-center gap-5">
                             <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center font-bold text-white text-2xl border border-white/5 shadow-inner">
-                              {hist.co.charAt(0)}
+                              {currentTest?.company?.charAt(0) || 'G'}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-200 text-lg mb-1 group-hover:text-white transition-colors">{hist.co} - {hist.role}</div>
-                              <div className="text-sm text-slate-400 font-medium">{hist.date} • {hist.diff} • Acc: {hist.acc}</div>
+                              <div className="font-bold text-slate-200 text-lg mb-1 group-hover:text-white transition-colors">{currentTest?.company} - {currentTest?.job_role}</div>
+                              <div className="text-sm text-slate-400 font-medium">Just now • {currentTest?.difficulty || 'Medium'}</div>
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-3">
-                            <div className="text-3xl font-black text-emerald-400">{hist.score}</div>
-                            <button className="text-sm font-bold text-indigo-400 hover:text-indigo-300 transition-colors">Retake</button>
+                            <div className="text-3xl font-black text-emerald-400">{testScore}%</div>
                           </div>
                        </div>
-                     ))}
                    </div>
                 </div>
               )}

@@ -3,7 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { useProfileStore } from '../store/profileStore';
-import { getAuthUsers, saveAuthUsers, hashPassword, checkPassword } from '../lib/auth';
+import { supabase } from '../lib/supabase';
 import { 
   User, Target, BrainCircuit, Bell, Lock, Shield, Palette, 
   Globe, Link as LinkIcon, FileText, HelpCircle, Info, Search,
@@ -46,7 +46,7 @@ export default function Settings() {
 
   // Form State
   const [formData, setFormData] = useState({
-    full_name: '',
+    name: '',
     email: '',
     phone: '',
     college: '',
@@ -64,7 +64,7 @@ export default function Settings() {
   useEffect(() => {
     if (profile) {
       setFormData({
-        full_name: profile.full_name || '',
+        name: profile.name || '',
         email: profile.email || '',
         phone: profile.phone || '',
         college: profile.college || '',
@@ -159,7 +159,7 @@ export default function Settings() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <InputField label="Full Name" value={formData.full_name} placeholder="John Doe" onChange={(e) => handleInputChange('full_name', e.target.value)} />
+              <InputField label="Full Name" value={formData.name} placeholder="John Doe" onChange={(e) => handleInputChange('name', e.target.value)} />
               <InputField label="Email Address" type="email" value={formData.email} placeholder="john@example.com" onChange={(e) => handleInputChange('email', e.target.value)} />
               <InputField label="Phone Number" type="tel" value={formData.phone} placeholder="+1 (555) 000-0000" onChange={(e) => handleInputChange('phone', e.target.value)} />
               <InputField label="College/University" value={formData.college} placeholder="University Name" onChange={(e) => handleInputChange('college', e.target.value)} />
@@ -696,7 +696,7 @@ function SecuritySettings() {
   const passwordStrength = [reqLength, reqUpper, reqLower, reqNumber, reqSpecial].filter(Boolean).length;
   const isPasswordValid = passwordStrength === 5;
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error('Please fill in all fields');
@@ -716,34 +716,22 @@ function SecuritySettings() {
       return;
     }
 
+    
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      const users = getAuthUsers();
-      const userIndex = users.findIndex(u => u.email === user.email);
-      
-      if (userIndex === -1) {
-        toast.error('User not found');
-        return;
-      }
-      
-      const dbUser = users[userIndex];
-      const isValid = checkPassword(currentPassword, dbUser.passwordHash);
-      if (!isValid) {
-        toast.error('Incorrect current password');
-        return;
-      }
-      
-      // Update password
-      users[userIndex].passwordHash = hashPassword(newPassword);
-      saveAuthUsers(users);
-      
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
       toast.success('Password updated successfully');
       setIsChangingPassword(false);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    }, 800);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update password');
+    } finally {
+      setIsLoading(false);
+    }
+
   };
 
   const getStrengthColor = () => {

@@ -1,6 +1,8 @@
 import React from 'react';
 import { CalendarClock, AlertTriangle, Clock } from 'lucide-react';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { useNotificationStore } from '../../store/notificationStore';
+import { useEffect } from 'react';
 
 const REMINDERS = [
   { 
@@ -27,21 +29,41 @@ const REMINDERS = [
 ];
 
 export default function Reminders() {
+
   const { hasData } = useDashboardData();
+  const notifications = useNotificationStore(state => state.notifications);
+  const fetchNotifications = useNotificationStore(state => state.fetchNotifications);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+  
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+  
+  // Map notifications to reminders format
+  const mappedReminders = notifications.slice(0, 5).map(n => ({
+    id: n.id,
+    title: n.title,
+    time: new Date(n.created_at).toLocaleDateString(),
+    type: n.type === 'info' ? 'goal' : n.type === 'warning' ? 'alert' : 'interview',
+    priority: n.type === 'warning' ? 'High' : 'Medium',
+    color: n.type === 'warning' ? 'from-orange-500 to-red-500' : 'from-blue-500 to-indigo-500'
+  }));
+
 
   return (
     <div className="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-[20px] p-6 h-full min-h-[320px] flex flex-col shadow-sm">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-base font-semibold text-white">Upcoming Reminders</h2>
-        {hasData && (
-          <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center">
-            <span className="text-[10px] font-bold text-indigo-400">3</span>
+        {unreadCount > 0 && (
+          <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center px-1.5">
+            <span className="text-[10px] font-bold text-indigo-400">{unreadCount}</span>
           </div>
         )}
       </div>
 
       <div className="space-y-3 flex-1 overflow-y-auto pr-2 scrollbar-hide flex flex-col">
-        {!hasData ? (
+        {mappedReminders.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center mb-3 border border-white/5">
               <CalendarClock className="w-5 h-5 text-slate-500" />
@@ -49,7 +71,7 @@ export default function Reminders() {
             <p className="text-xs text-slate-400 font-medium">No upcoming reminders right now.</p>
           </div>
         ) : (
-          REMINDERS.map((reminder, idx) => (
+          mappedReminders.map((reminder, idx) => (
             <div key={idx} className="flex items-center gap-3 p-3.5 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors group relative overflow-hidden">
               <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${reminder.color}`} />
               

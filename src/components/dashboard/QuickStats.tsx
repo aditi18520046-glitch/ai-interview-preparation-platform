@@ -7,12 +7,12 @@ export default function QuickStats() {
   const { hasData, stats } = useDashboardData();
 
   const STATS = [
-    { label: 'Interviews Completed', value: hasData ? stats.interviews : '0', icon: Mic, trend: hasData ? '+2 this week' : 'Start your first interview', color: 'text-blue-400 bg-blue-500/10' },
-    { label: 'Mock Tests Taken', value: hasData ? stats.tests : '0', icon: FileEdit, trend: hasData ? '+1 this week' : 'No tests taken', color: 'text-indigo-400 bg-indigo-500/10' },
-    { label: 'Problems Solved', value: hasData ? stats.coding : '0', icon: Code2, trend: hasData ? '+15 this week' : 'Start coding practice', color: 'text-fuchsia-400 bg-fuchsia-500/10' },
-    { label: 'Resume ATS Score', value: hasData ? `${stats.resumeScore}%` : '--', icon: FileText, trend: hasData ? '+5% improvement' : 'Upload your resume', color: 'text-emerald-400 bg-emerald-500/10' },
-    { label: 'Overall Accuracy', value: hasData ? `${stats.accuracy}%` : '--', icon: Target, trend: hasData ? '+2% this week' : 'Not enough data', color: 'text-orange-400 bg-orange-500/10' },
-    { label: 'Practice Hours', value: hasData ? `${stats.practiceHours}h` : '0h', icon: Clock, trend: hasData ? '+4h this week' : 'Start practicing', color: 'text-rose-400 bg-rose-500/10' },
+    { label: 'Interviews Completed', value: hasData ? stats.interviews : '0', icon: Mic, trend: hasData ? '' : 'Start your first interview', color: 'text-blue-400 bg-blue-500/10' },
+    { label: 'Mock Tests Taken', value: hasData ? stats.tests : '0', icon: FileEdit, trend: hasData ? '' : 'No tests taken', color: 'text-indigo-400 bg-indigo-500/10' },
+    { label: 'Problems Solved', value: hasData ? stats.coding : '0', icon: Code2, trend: hasData ? '' : 'Start coding practice', color: 'text-fuchsia-400 bg-fuchsia-500/10' },
+    { label: 'Resume ATS Score', value: hasData ? `${stats.resumeScore}%` : '--', icon: FileText, trend: hasData ? '' : 'Upload your resume', color: 'text-emerald-400 bg-emerald-500/10' },
+    { label: 'Overall Accuracy', value: hasData ? `${stats.accuracy}%` : '--', icon: Target, trend: hasData ? '' : 'Not enough data', color: 'text-orange-400 bg-orange-500/10' },
+    { label: 'Practice Hours', value: hasData ? `${stats.practiceHours}h` : '0h', icon: Clock, trend: hasData ? '' : 'Start practicing', color: 'text-rose-400 bg-rose-500/10' },
   ];
 
   return (

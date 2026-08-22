@@ -11,6 +11,15 @@ import { Link } from 'react-router-dom';
 import profileHero from '../assets/images/profile_hero_1784645278930.jpg';
 import { useProfileStore } from '../store/profileStore';
 
+import { useDashboardStore } from '../store/dashboardStore';
+import { useInterviewStore } from '../store/interviewStore';
+import { useMockTestStore } from '../store/mockTestStore';
+import { useCodingStore } from '../store/codingStore';
+import { useResumeStore } from '../store/resumeStore';
+import { useRoadmapStore } from '../store/roadmapStore';
+import { useEffect } from 'react';
+
+
 export default function Profile() {
   const { profile } = useProfileStore();
 
@@ -59,7 +68,7 @@ export default function Profile() {
                     <User className="w-6 h-6 text-white" />
                   )}
                 </div>
-                <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{profile?.full_name || 'My Career Profile'}</h1>
+                <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{profile?.name || 'My Career Profile'}</h1>
               </div>
               <p className="text-slate-400 text-lg leading-relaxed mb-6">
                 View your complete interview preparation journey, monitor your progress, manage your skills, and receive AI-powered recommendations tailored to your career goals.
@@ -112,7 +121,7 @@ export default function Profile() {
                   )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">{profile?.full_name || 'Not Added Yet'}</h3>
+                  <h3 className="text-lg font-bold text-white">{profile?.name || 'Not Added Yet'}</h3>
                   <p className="text-sm text-slate-500">{profile?.career_goal || 'Add your professional headline'}</p>
                 </div>
               </div>

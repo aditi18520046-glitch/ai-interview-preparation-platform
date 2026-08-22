@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 
 export interface UserSettings {
@@ -28,11 +29,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     if (!user) return;
     set({ isLoading: true });
     try {
-      let { data, error } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      let data = await db.collection('user_settings').findOne({ user_id: user.id });
+      let error = null;
         
       if (error) {
          console.warn('Could not fetch settings:', error);
@@ -40,7 +38,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         
       if (!data) {
         const newSettings = { user_id: user.id, theme: 'dark', language: 'en' };
-        const { error: insErr } = await supabase.from('user_settings').insert([newSettings]);
+        const insErr = null;
+        await db.collection('user_settings').insert(newSettings);
         if (!insErr) {
           data = newSettings;
         } else {
@@ -60,11 +59,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const user = useAuthStore.getState().user;
     if (!user) return;
     try {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .upsert({ user_id: user.id, ...updates }, { onConflict: 'user_id' })
-        .select()
-        .maybeSingle();
+      const data = await db.collection('user_settings').upsert({ user_id: user.id }, updates);
+      const error = null;
       if (error) {
          console.warn('Could not update settings:', error);
       }
