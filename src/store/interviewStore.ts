@@ -1,38 +1,39 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 import { useDashboardStore } from './dashboardStore';
 import { useProgressStore } from './progressStore';
 
-export interface InterviewHistory {
+export interface InterviewData {
   id?: string;
   user_id: string;
   company: string;
   job_role: string;
   interview_type: string;
+  interview_mode?: string;
+  interview_language?: string;
+  skills_focus?: string;
   difficulty: string;
-  start_time: string;
+  started_at?: string;
+  completed_at?: string;
   questions?: any[];
   answers?: any[];
   ai_feedback?: string;
   final_score?: number;
   duration?: number;
-  completion_time?: string;
   status: 'in_progress' | 'completed';
+  start_time?: string;
 }
 
 interface InterviewState {
-  currentInterview: InterviewHistory | null;
-  history: InterviewHistory[];
+  currentInterview: InterviewData | null;
+  history: InterviewData[];
   isLoading: boolean;
-  startInterview: (data: Partial<InterviewHistory>) => Promise<void>;
-  updateInterview: (id: string, updates: Partial<InterviewHistory>) => Promise<void>;
-  finishInterview: (id: string, data: Partial<InterviewHistory>) => Promise<void>;
+  startInterview: (data: Partial<InterviewData>) => Promise<void>;
+  updateInterview: (id: string, updates: Partial<InterviewData>) => Promise<void>;
+  finishInterview: (id: string, data: Partial<InterviewData>) => Promise<void>;
   fetchHistory: () => Promise<void>;
   resumeInterview: (id: string) => Promise<void>;
 }
-
-const generateId = () => Math.random().toString(36).substring(2, 9);
 
 export const useInterviewStore = create<InterviewState>((set, get) => ({
   currentInterview: null,
@@ -47,21 +48,23 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
         throw new Error('User must be authenticated to start an interview');
       }
 
-      const newInterview: InterviewHistory = {
+      const newInterview: InterviewData = {
         user_id: user.id,
         company: data.company || '',
         job_role: data.job_role || '',
         interview_type: data.interview_type || '',
+        interview_mode: data.interview_mode || '',
+        interview_language: data.interview_language || '',
+        skills_focus: data.skills_focus || '',
         difficulty: data.difficulty || '',
-        start_time: new Date().toISOString(),
+        started_at: new Date().toISOString(),
         status: 'in_progress',
         questions: [],
         answers: []
       };
 
-      const inserted = await db.collection('interview_history').insert(newInterview);
-      const error = null;
-
+      const { data: inserted, error } = await supabase.from('interviews').insert([newInterview]).select().single();
+      
       if (error) {
         console.error('Error starting interview:', error.message, error.details, error.hint);
         throw error;
@@ -70,8 +73,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
       set({ currentInterview: inserted });
     } catch (error) {
       console.error('Failed to start interview:', error);
-      // Removed fallback to local state because it creates un-syncable records and bypasses RLS
-      throw error; // Rethrow to let the UI handle the failure
+      throw error;
     } finally {
       set({ isLoading: false });
     }
@@ -79,8 +81,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
 
   updateInterview: async (id, updates) => {
     try {
-      const data = await db.collection('interview_history').update({ id }, updates);
-      const error = null;
+      const { data, error } = await supabase.from('interviews').update(updates).eq('id', id).select().single();
         
       if (error) {
         console.error('Error updating interview:', error.message, error.details);
@@ -94,35 +95,46 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
 
   finishInterview: async (id, data) => {
     try {
-      const updated = await db.collection('interview_history').update({ id }, {
+      const { data: updated, error } = await supabase.from('interviews').update({
           ...data,
           status: 'completed',
-          completion_time: new Date().toISOString()
-        });
-      const error = null;
+          completed_at: new Date().toISOString()
+        }).eq('id', id).select().single();
         
       if (error) {
         console.error('Error finishing interview:', error.message, error.details);
         throw error;
       }
+      
+      // Now create the interview_history record as requested
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+         await supabase.from('interview_history').insert([{
+           user_id: user.id,
+           company: updated.company,
+           job_role: updated.job_role,
+           difficulty: updated.difficulty,
+           status: 'completed',
+           overall_score: updated.final_score,
+           transcript: updated.answers,
+           feedback: updated.ai_feedback ? { raw: updated.ai_feedback } : {}
+         }]);
+      }
 
       set({ currentInterview: null });
       get().fetchHistory();
       
-      // Update dashboard stats
       try {
         const currentStats = useDashboardStore.getState().stats;
-        await useDashboardStore.getState().updateStats({
-           interviews_completed: (currentStats?.interviews_completed || 0) + 1,
-           total_xp: (currentStats?.total_xp || 0) + (data.final_score || 0)
+        await useDashboardStore.getState().updateStats({ 
+          interviews_completed: (currentStats?.interviews_completed || 0) + 1,
+          total_xp: (currentStats?.total_xp || 0) + (data.final_score || 0)
         });
         
-        // Update progress
         await useProgressStore.getState().updateProgress();
       } catch (e) {
         console.error('Failed to update stats after interview', e);
       }
-
     } catch (error) {
       console.error('Failed to finish interview:', error);
     }
@@ -137,8 +149,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
         return;
       }
 
-      const data = await db.collection('interview_history').find({ user_id: user.id }, { sort: { start_time: -1 } });
-      const error = null;
+      const { data, error } = await supabase.from('interviews').select('*').eq('user_id', user.id).order('started_at', { ascending: false });
         
       if (error) {
         console.error('Error fetching interview history:', error.message, error.details);

@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 
 interface Company {
   id: string;
@@ -33,12 +32,12 @@ export const useCompanyRoleStore = create<CompanyRoleState>((set) => ({
     set({ isLoading: true });
     try {
       const [compRes, roleRes] = await Promise.all([
-        db.collection('companies').find({}),
-        db.collection('job_roles').find({})
+        supabase.from('companies').select('*'),
+        supabase.from('job_roles').select('*')
       ]);
       set({ 
-        companies: (compRes as any) || [], 
-        roles: (roleRes as any) || [] 
+        companies: compRes.data || [], 
+        roles: roleRes.data || [] 
       });
     } catch (error) {
       console.error('Error fetching companies and roles:', error);

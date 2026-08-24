@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 
 export interface DashboardStats {
   id?: string;
@@ -39,7 +38,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
             const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
-      const data = await db.collection('dashboard_stats').findOne({});
+      const { data, error } = await supabase.from('dashboard_stats').select('*').eq('user_id', user.id).maybeSingle();
+      if (error) throw error;
       set({ stats: data || { user_id: user.id } });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -56,7 +56,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
-      const data = await db.collection('dashboard_stats').upsert({}, updates);
+      const { data, error } = await supabase.from('dashboard_stats').upsert({ user_id: user.id, ...updates }, { onConflict: 'user_id' }).select().single();
+      if (error) throw error;
       set({ stats: data });
     } catch (error) {
       console.error('Error in updateStats:', error);

@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 
 export interface ProfileData {
   id: string;
@@ -34,45 +33,46 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   fetchProfile: async (userId: string) => {
     set({ isLoading: true });
     try {
-      const data = await db.collection('profiles').findOne({ id: userId });
-      const error = null;
+      let { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
         
-      if (error) {
-        console.error('Error fetching profile:', error.message, error.details);
+      if (!data && !error) {
+        // Attempt to create
+        const userResp = await supabase.auth.getUser();
+        const email = userResp.data.user?.email || '';
+        const name = userResp.data.user?.user_metadata?.full_name || '';
+        
+        const newProfile = {
+            id: userId,
+            full_name: name,
+            email: email
+        };
+        const { error: insErr } = await supabase.from('profiles').insert([newProfile]);
+        if (!insErr) {
+            data = newProfile;
+        } else {
+            console.error('Failed to create profile:', insErr.message);
+        }
       }
-      
 
       if (data) {
-        set({ profile: data });
+        const mappedProfile: ProfileData = {
+          id: data.id,
+          name: data.full_name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          college: data.college || '',
+          branch: data.branch || '',
+          year: data.graduation_year || '',
+          skills: data.skills || '',
+          linkedin: data.linkedin || '',
+          github: data.github || '',
+          portfolio: data.portfolio || '',
+          resume_url: data.resume_url || '',
+          profile_image: data.avatar_url || '',
+          career_goal: data.career_goal || '',
+        };
+        set({ profile: mappedProfile });
       } else {
-        // Auto-create profile on first fetch if it doesn't exist
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user && session.user.id === userId) {
-            const userMeta = session.user.user_metadata || {};
-            const newProfile = {
-              id: userId,
-              name: userMeta.full_name || userMeta.name || session.user.email?.split('@')[0] || 'User',
-              email: session.user.email || '',
-              college: userMeta.college || '',
-              branch: userMeta.branch || '',
-              year: userMeta.year || '',
-              profile_image: null
-            };
-            
-            const insertError = null;
-            await db.collection('profiles').insert(newProfile);
-              
-            if (!insertError) {
-              set({ profile: newProfile as ProfileData });
-              return; // exit early since we set it
-            } else {
-              console.error('Failed to create initial profile:', insertError.message);
-            }
-          }
-        } catch (e) {
-          console.error('Error in profile auto-creation:', e);
-        }
         set({ profile: null });
       }
 
@@ -85,8 +85,23 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
   updateProfile: async (userId: string, data: Partial<ProfileData>) => {
     try {
-      const error = null;
-      await db.collection('profiles').upsert({ id: userId }, data);
+      const dbData = {
+        id: userId,
+        ...(data.name !== undefined && { full_name: data.name }),
+        ...(data.email !== undefined && { email: data.email }),
+        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.college !== undefined && { college: data.college }),
+        ...(data.branch !== undefined && { branch: data.branch }),
+        ...(data.year !== undefined && { graduation_year: data.year }),
+        ...(data.skills !== undefined && { skills: data.skills }),
+        ...(data.linkedin !== undefined && { linkedin: data.linkedin }),
+        ...(data.github !== undefined && { github: data.github }),
+        ...(data.portfolio !== undefined && { portfolio: data.portfolio }),
+        ...(data.resume_url !== undefined && { resume_url: data.resume_url }),
+        ...(data.profile_image !== undefined && { avatar_url: data.profile_image }),
+        ...(data.career_goal !== undefined && { career_goal: data.career_goal }),
+      };
+      const { error } = await supabase.from('profiles').upsert(dbData, { onConflict: 'id' });
         
       if (error) {
         console.error('Error updating profile:', error.message, error.details);
@@ -106,7 +121,6 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     try {
       const fileExt = file.name.split('.').pop();
       const filePath = `${userId}-${Math.random()}.${fileExt}`;
-
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
         .upload(filePath, file);

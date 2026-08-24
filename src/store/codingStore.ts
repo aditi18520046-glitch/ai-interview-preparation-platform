@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 import { useDashboardStore } from './dashboardStore';
 import { useProgressStore } from './progressStore';
@@ -8,16 +7,20 @@ import { useProgressStore } from './progressStore';
 export interface CodingSubmission {
   id?: string;
   user_id: string;
-  programming_language: string;
-  company: string;
-  question: string;
-  submitted_code: string;
-  runtime: number;
-  memory: number;
-  passed_test_cases: number;
-  failed_test_cases: number;
+  problem_title: string;
+  language: string;
+  status: string;
   score: number;
+  execution_time: number;
+  submitted_code: string;
+  started_at?: string;
+  submitted_at?: string;
+  // For backwards compatibility
+  question?: string;
+  programming_language?: string;
+  runtime?: number;
   created_at?: string;
+  company?: string;
 }
 
 interface CodingState {
@@ -39,19 +42,17 @@ export const useCodingStore = create<CodingState>((set, get) => ({
     try {
       const newSubmission: CodingSubmission = {
         user_id: user.id,
-        programming_language: data.programming_language || '',
-        company: data.company || '',
-        question: data.question || '',
+        problem_title: data.problem_title || data.question || '',
+        language: data.language || data.programming_language || '',
+        status: data.status || 'completed',
+        score: data.score || 0,
+        execution_time: data.execution_time || data.runtime || 0,
         submitted_code: data.submitted_code || '',
-        runtime: data.runtime || 0,
-        memory: data.memory || 0,
-        passed_test_cases: data.passed_test_cases || 0,
-        failed_test_cases: data.failed_test_cases || 0,
-        score: data.score || 0
+        started_at: data.started_at || new Date().toISOString(),
+        submitted_at: data.submitted_at || new Date().toISOString()
       };
 
-      const error = null;
-      await db.collection('coding_submissions').insert(newSubmission);
+      const { error } = await supabase.from('coding_submissions').insert([newSubmission]);
 
       if (error) throw error;
 
@@ -81,8 +82,7 @@ export const useCodingStore = create<CodingState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      const data = await db.collection('coding_submissions').find({ user_id: user.id }, { sort: { created_at: -1 } });
-      const error = null;
+      const { data, error } = await supabase.from('coding_submissions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
         
       if (error) throw error;
       set({ history: data || [] });

@@ -1,19 +1,33 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 import { useProgressStore } from './progressStore';
 
 export interface LearningRoadmap {
   id?: string;
   user_id: string;
-  company: string;
-  job_role: string;
-  experience_level: string;
-  generated_roadmap: any;
-  completed_topics: string[];
-  remaining_topics: string[];
-  completion_percentage: number;
+  target_company?: string;
+  job_role?: string;
+  programming_language?: string;
+  experience_level?: string;
+  skill_level?: string;
+  learning_goal?: string;
+  interview_type?: string;
+  preferred_language?: string;
+  roadmap_duration?: string;
+  weekly_study_hours?: string;
+  difficulty?: string;
+  expected_readiness?: number;
+  roadmap_data?: any;
+  status?: string;
+  
+  // Keep for backwards compatibility
+  company?: string;
+  generated_roadmap?: any;
+  completed_topics?: string[];
+  remaining_topics?: string[];
+  completion_percentage?: number;
+  
   created_at?: string;
   updated_at?: string;
 }
@@ -41,19 +55,34 @@ export const useRoadmapStore = create<RoadmapState>((set, get) => ({
     try {
       const newRoadmap = {
         user_id: user.id,
-        company: data.company || '',
+        target_company: data.target_company || data.company || '',
         job_role: data.job_role || '',
         experience_level: data.experience_level || '',
-        generated_roadmap: data.generated_roadmap || {},
-        completed_topics: data.completed_topics || [],
-        remaining_topics: data.remaining_topics || [],
+        programming_language: data.programming_language || '',
+        skill_level: data.skill_level || '',
+        learning_goal: data.learning_goal || '',
+        interview_type: data.interview_type || '',
+        preferred_language: data.preferred_language || '',
+        roadmap_duration: data.roadmap_duration || '',
+        weekly_study_hours: data.weekly_study_hours || '',
+        difficulty: data.difficulty || '',
+        expected_readiness: data.expected_readiness || 0,
+        roadmap_data: data.roadmap_data || data.generated_roadmap || {},
+        status: data.status || 'active',
+        
+        // Include old fields if DB relies on them
         completion_percentage: data.completion_percentage || 0
       };
 
-      const inserted = await db.collection('learning_roadmap').insert(newRoadmap);
-      const error = null;
-
-      if (error) throw error;
+      const { data: inserted, error } = await supabase.from('learning_roadmap').upsert(newRoadmap, { onConflict: 'user_id' }).select().maybeSingle();
+      
+      if (error) {
+         if (error.code === 'PGRST116') {
+             // Supabase sometimes returns this for upsert returning multiple, which shouldn't happen here.
+         } else {
+             throw error;
+         }
+      }
       set({ currentRoadmap: inserted });
       get().fetchHistory();
     } catch (error) {
@@ -65,19 +94,17 @@ export const useRoadmapStore = create<RoadmapState>((set, get) => ({
 
   updateProgress: async (id, updates) => {
     try {
-      const data = await db.collection('learning_roadmap').update({ id }, updates);
-      const error = null;
+      const { data, error } = await supabase.from('learning_roadmap').update(updates).eq('id', id).select().single();
         
       if (error) throw error;
-
       set({ currentRoadmap: data });
       get().fetchHistory();
+      
       try {
          await useProgressStore.getState().updateProgress();
       } catch (e) {
          console.error('Failed to update progress after roadmap update', e);
       }
-
     } catch (error) {
       console.error('Error updating roadmap:', error);
     }
@@ -89,8 +116,7 @@ export const useRoadmapStore = create<RoadmapState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      const data = await db.collection('learning_roadmap').find({ user_id: user.id }, { sort: { created_at: -1 } });
-      const error = null;
+      const { data, error } = await supabase.from('learning_roadmap').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
         
       if (error) throw error;
       set({ history: data || [] });

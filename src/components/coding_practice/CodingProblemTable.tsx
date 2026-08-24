@@ -3,21 +3,20 @@ import { useSavedQuestionStore } from '../../store/savedQuestionStore';
 import { CheckCircle2, Circle, Clock, Zap, Bookmark, ListTodo } from 'lucide-react';
 
 export default function CodingProblemTable({ onSolve }: { onSolve: (id: string) => void }) {
-  const { saveQuestion, removeQuestion, savedQuestions } = useSavedQuestionStore();
+  const { saveQuestion, deleteQuestion, questions } = useSavedQuestionStore();
   
   const handleBookmarkToggle = (p: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    const isSaved = savedQuestions.some(q => q.question_id === p.id);
+    const isSaved = questions.some(q => q.question === p.name);
     if (isSaved) {
-      const q = savedQuestions.find(q => q.question_id === p.id);
-      if (q && q.id) removeQuestion(q.id);
+      const q = questions.find(q => q.question === p.name);
+      if (q && q.id) deleteQuestion(q.id);
     } else {
       saveQuestion({
-        question_id: p.id,
-        question_text: p.name,
-        type: 'coding',
+        question: p.name,
+        question_type: 'coding',
         difficulty: p.diff,
-        topic: p.topic
+        source: p.topic
       });
     }
   };
@@ -106,10 +105,10 @@ export default function CodingProblemTable({ onSolve }: { onSolve: (id: string) 
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <button 
-                      className={`p-2 rounded-lg transition-colors ${savedQuestions.some(q => q.question_id === p.id) ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
+                      className={`p-2 rounded-lg transition-colors ${questions.some(q => q.question_id === p.id) ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
                       onClick={(e) => handleBookmarkToggle(p, e)}
                     >
-                      <Bookmark className={`w-5 h-5 ${savedQuestions.some(q => q.question_id === p.id) ? 'fill-current' : ''}`} />
+                      <Bookmark className={`w-5 h-5 ${questions.some(q => q.question_id === p.id) ? 'fill-current' : ''}`} />
                     </button>
                   </td>
                 </tr>
@@ -131,10 +130,10 @@ export default function CodingProblemTable({ onSolve }: { onSolve: (id: string) 
                   <h3 className="text-base font-bold text-slate-200">{p.name}</h3>
                 </div>
                 <button 
-                  className={`p-1.5 shrink-0 rounded-lg transition-colors ${savedQuestions.some(q => q.question_id === p.id) ? 'text-indigo-400' : 'text-slate-500'}`}
+                  className={`p-1.5 shrink-0 rounded-lg transition-colors ${questions.some(q => q.question_id === p.id) ? 'text-indigo-400' : 'text-slate-500'}`}
                   onClick={(e) => handleBookmarkToggle(p, e)}
                 >
-                  <Bookmark className={`w-5 h-5 ${savedQuestions.some(q => q.question_id === p.id) ? 'fill-current' : ''}`} />
+                  <Bookmark className={`w-5 h-5 ${questions.some(q => q.question_id === p.id) ? 'fill-current' : ''}`} />
                 </button>
               </div>
               

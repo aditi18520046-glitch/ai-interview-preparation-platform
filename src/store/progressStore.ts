@@ -1,18 +1,29 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 
 export interface Progress {
   id?: string;
   user_id: string;
-  overall_score: number;
-  interviews_completed: number;
-  mock_tests_completed: number;
-  coding_problems_solved: number;
-  roadmap_progress: number;
-  recent_activities: any[];
-  last_updated?: string;
+  overall_progress: number;
+  interview_readiness: number;
+  resume_score: number;
+  technical_skills_score: number;
+  coding_score: number;
+  communication_score: number;
+  problem_solving_score: number;
+  learning_streak: number;
+  weekly_goal: number;
+  weekly_completed: number;
+  ai_insights?: any[];
+  ai_recommendations?: any[];
+  // Backwards compatibility
+  recent_activities?: any[];
+  overall_score?: number;
+  roadmap_progress?: number;
+  interviews_completed?: number;
+  mock_tests_completed?: number;
+  coding_problems_solved?: number;
 }
 
 interface ProgressState {
@@ -32,21 +43,25 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      let data = await db.collection('progress').findOne({ user_id: user.id });
-      let error = null;
+      let { data, error } = await supabase.from('progress').select('*').eq('user_id', user.id).maybeSingle();
         
-      if (!data) {
-        const newProgress = {
+      if (!data && !error) {
+        const newProgress: Progress = {
             user_id: user.id,
-            overall_score: 0,
-            interviews_completed: 0,
-            mock_tests_completed: 0,
-            coding_problems_solved: 0,
-            roadmap_progress: 0,
-            recent_activities: []
+            overall_progress: 0,
+            interview_readiness: 0,
+            resume_score: 0,
+            technical_skills_score: 0,
+            coding_score: 0,
+            communication_score: 0,
+            problem_solving_score: 0,
+            learning_streak: 0,
+            weekly_goal: 5,
+            weekly_completed: 0,
+            ai_insights: [],
+            ai_recommendations: []
         };
-        const insertError = null;
-        await db.collection('progress').insert(newProgress);
+        const { error: insertError } = await supabase.from('progress').insert([newProgress]);
         if (!insertError) {
            data = newProgress;
         } else {
@@ -68,25 +83,12 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     if (!user) return;
 
     try {
-      // Calculate derived metrics
-      // In a real app this would be a backend cron/trigger, but we simulate it here.
-      
-      // 1. Interviews
-      const interviews = await db.collection('interview_history').find({ user_id: user.id, status: 'completed' });
-      const interviewsCount = interviews.length;
+      const { count: interviewsCount } = await supabase.from('interviews').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'completed');
+      const { count: mockTestsCount } = await supabase.from('mock_tests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'completed');
+      const { count: codingCount } = await supabase.from('coding_submissions').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+      const { data: roadmaps } = await supabase.from('learning_roadmap').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1);
         
-      // 2. Mock Tests
-      const mockTests = await db.collection('mock_tests').find({ user_id: user.id, status: 'completed' });
-      const mockTestsCount = mockTests.length;
-        
-      // 3. Coding problems
-      const codings = await db.collection('coding_submissions').find({ user_id: user.id });
-      const codingCount = codings.length;
-        
-      // 4. Roadmap progress
-      const roadmaps = await db.collection('learning_roadmap').find({ user_id: user.id }, { sort: { created_at: -1 }, limit: 1 });
-        
-      const latestRoadmapProgress = roadmaps && roadmaps.length > 0 ? roadmaps[0].completion_percentage : 0;
+      const latestRoadmapProgress = roadmaps && roadmaps.length > 0 ? (roadmaps[0].completion_percentage || 0) : 0;
       
       const overallScore = Math.min(100, (
         ((interviewsCount || 0) * 5) + 
@@ -96,15 +98,12 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
       ));
       
       const updates = {
-        interviews_completed: interviewsCount || 0,
-        mock_tests_completed: mockTestsCount || 0,
-        coding_problems_solved: codingCount || 0,
-        roadmap_progress: latestRoadmapProgress,
-        overall_score: Math.round(overallScore)
+        overall_progress: Math.round(overallScore),
+        interview_readiness: Math.min(100, ((interviewsCount || 0) * 10)),
+        coding_score: Math.min(100, ((codingCount || 0) * 10))
       };
 
-      const data = await db.collection('progress').upsert({ user_id: user.id }, updates);
-      const error = null;
+      const { data, error } = await supabase.from('progress').upsert({ user_id: user.id, ...updates }, { onConflict: 'user_id' }).select().maybeSingle();
         
       if (error) throw error;
       set({ progress: data });

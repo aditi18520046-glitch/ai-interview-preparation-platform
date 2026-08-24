@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 import { useDashboardStore } from './dashboardStore';
 import { useProgressStore } from './progressStore';
@@ -10,14 +9,24 @@ export interface MockTest {
   user_id: string;
   company: string;
   job_role: string;
-  questions: any[];
-  user_answers: any[];
-  correct_answers: any[];
-  marks: number;
-  percentage: number;
-  time_taken: number;
+  difficulty?: string;
+  duration?: number;
+  language?: string;
   status: 'in_progress' | 'completed';
+  total_questions?: number;
+  correct_answers?: number;
+  score?: number;
+  communication_score?: number;
+  coding_score?: number;
+  started_at?: string;
+  completed_at?: string;
+  // Keep arrays for backward compatibility with frontend code
+  questions?: any[];
+  user_answers?: any[];
   created_at?: string;
+  percentage?: number;
+  marks?: number;
+  time_taken?: number;
 }
 
 interface MockTestState {
@@ -46,18 +55,15 @@ export const useMockTestStore = create<MockTestState>((set, get) => ({
         user_id: user.id,
         company: data.company || '',
         job_role: data.job_role || '',
-        questions: data.questions || [],
-        user_answers: data.user_answers || [],
-        correct_answers: data.correct_answers || [],
-        marks: 0,
-        percentage: 0,
-        time_taken: 0,
-        status: 'in_progress'
+        difficulty: data.difficulty || '',
+        duration: data.duration || 0,
+        language: data.language || '',
+        status: 'in_progress',
+        started_at: new Date().toISOString()
       };
 
-      const inserted = await db.collection('mock_tests').insert(newTest);
-      const error = null;
-
+      const { data: inserted, error } = await supabase.from('mock_tests').insert([newTest]).select().single();
+      
       if (error) throw error;
       set({ currentTest: inserted });
     } catch (error) {
@@ -69,8 +75,7 @@ export const useMockTestStore = create<MockTestState>((set, get) => ({
 
   updateTest: async (id, updates) => {
     try {
-      const data = await db.collection('mock_tests').update({ id }, updates);
-      const error = null;
+      const { data, error } = await supabase.from('mock_tests').update(updates).eq('id', id).select().single();
         
       if (error) throw error;
       set({ currentTest: data });
@@ -81,28 +86,26 @@ export const useMockTestStore = create<MockTestState>((set, get) => ({
 
   finishTest: async (id, data) => {
     try {
-      const updated = await db.collection('mock_tests').update({ id }, {
+      const { data: updated, error } = await supabase.from('mock_tests').update({
           ...data,
-          status: 'completed'
-        });
-      const error = null;
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        }).eq('id', id).select().single();
         
       if (error) throw error;
-
       set({ currentTest: null });
       get().fetchHistory();
       
       try {
         const currentStats = useDashboardStore.getState().stats;
-        await useDashboardStore.getState().updateStats({
-           mock_tests_completed: (currentStats?.mock_tests_completed || 0) + 1,
-           total_xp: (currentStats?.total_xp || 0) + Math.round(data.percentage || 0)
+        await useDashboardStore.getState().updateStats({ 
+          mock_tests_completed: (currentStats?.mock_tests_completed || 0) + 1,
+          total_xp: (currentStats?.total_xp || 0) + Math.round(data.score || 0)
         });
         await useProgressStore.getState().updateProgress();
       } catch (e) {
         console.error('Failed to update stats after mock test', e);
       }
-
     } catch (error) {
       console.error('Error finishing mock test:', error);
     }
@@ -114,8 +117,7 @@ export const useMockTestStore = create<MockTestState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      const data = await db.collection('mock_tests').find({ user_id: user.id }, { sort: { created_at: -1 } });
-      const error = null;
+      const { data, error } = await supabase.from('mock_tests').select('*').eq('user_id', user.id).order('started_at', { ascending: false });
         
       if (error) throw error;
       set({ history: data || [] });

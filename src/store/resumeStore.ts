@@ -1,26 +1,38 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 import { useDashboardStore } from './dashboardStore';
 
 export interface ResumeAnalysis {
   id?: string;
   user_id: string;
-  resume_url: string;
-  ats_score: number;
-  resume_score: number;
-  missing_skills: string[];
-  grammar_suggestions: string[];
-  ai_suggestions: string[];
+  file_url: string;
+  file_name?: string;
+  file_size?: number;
+  ats_score?: number;
+  quality_score?: number;
+  company_matches?: any[];
+  recommended_roles?: string[];
+  skill_gaps?: string[];
+  improvement_suggestions?: string[];
+  grammar_feedback?: string[];
+  keyword_suggestions?: string[];
+  analysis_status?: string;
+  created_at?: string;
+  // Backwards compatibility
+  resume_url?: string;
   upload_date?: string;
+  resume_score?: number;
+  missing_skills?: string[];
+  grammar_suggestions?: string[];
+  ai_suggestions?: string[];
 }
 
 interface ResumeState {
   history: ResumeAnalysis[];
   currentAnalysis: ResumeAnalysis | null;
   isLoading: boolean;
-  uploadResume: (file: File) => Promise<string | null>;
+  uploadResume: (file: File) => Promise<{ fileUrl: string, fileName: string, fileSize: number } | null>;
   saveAnalysis: (data: Partial<ResumeAnalysis>) => Promise<void>;
   fetchHistory: () => Promise<void>;
 }
@@ -49,7 +61,11 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
         .from('resumes')
         .getPublicUrl(filePath);
 
-      return data.publicUrl;
+      return {
+        fileUrl: data.publicUrl,
+        fileName: file.name,
+        fileSize: file.size
+      };
     } catch (error) {
       console.error('Error uploading resume:', error);
       return null;
@@ -62,34 +78,37 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      const newAnalysis = {
+      const newAnalysis: ResumeAnalysis = {
         user_id: user.id,
-        resume_url: data.resume_url || '',
+        file_url: data.file_url || '',
+        file_name: data.file_name || '',
+        file_size: data.file_size || 0,
         ats_score: data.ats_score || 0,
-        resume_score: data.resume_score || 0,
-        missing_skills: data.missing_skills || [],
-        grammar_suggestions: data.grammar_suggestions || [],
-        ai_suggestions: data.ai_suggestions || []
+        quality_score: data.quality_score || 0,
+        company_matches: data.company_matches || [],
+        recommended_roles: data.recommended_roles || [],
+        skill_gaps: data.skill_gaps || [],
+        improvement_suggestions: data.improvement_suggestions || [],
+        grammar_feedback: data.grammar_feedback || [],
+        keyword_suggestions: data.keyword_suggestions || [],
+        analysis_status: data.analysis_status || 'completed'
       };
 
-      const inserted = await db.collection('resume_analysis').insert(newAnalysis);
-      const error = null;
-
+      const { data: inserted, error } = await supabase.from('resume_analysis').insert([newAnalysis]).select().single();
+      
       if (error) throw error;
-
       set({ currentAnalysis: inserted });
       get().fetchHistory();
       
       try {
         const currentStats = useDashboardStore.getState().stats;
-        await useDashboardStore.getState().updateStats({
-           resume_uploaded: (currentStats?.resume_uploaded || 0) + 1,
-           total_xp: (currentStats?.total_xp || 0) + 10 // small XP boost for resume upload
+        await useDashboardStore.getState().updateStats({ 
+          resume_uploaded: (currentStats?.resume_uploaded || 0) + 1,
+          total_xp: (currentStats?.total_xp || 0) + 10 // small XP boost for resume upload
         });
       } catch (e) {
         console.error('Failed to update stats after resume analysis', e);
       }
-
     } catch (error) {
       console.error('Error saving resume analysis:', error);
     } finally {
@@ -103,8 +122,7 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     
     set({ isLoading: true });
     try {
-      const data = await db.collection('resume_analysis').find({ user_id: user.id }, { sort: { upload_date: -1 } });
-      const error = null;
+      const { data, error } = await supabase.from('resume_analysis').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
         
       if (error) throw error;
       set({ history: data || [] });

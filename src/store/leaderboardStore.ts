@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { db } from '../lib/db';
 import { useAuthStore } from './authStore';
 
 export interface LeaderboardEntry {
@@ -10,6 +9,13 @@ export interface LeaderboardEntry {
   coding_score?: number;
   interview_score?: number;
   mock_test_score?: number;
+  score?: number;
+  badge?: string;
+  level?: string;
+  // Merged profile info
+  user?: string;
+  college?: string;
+  avatar_url?: string;
   [key: string]: any;
 }
 
@@ -29,30 +35,51 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
   fetchLeaderboard: async () => {
     const user = useAuthStore.getState().user;
     set({ isLoading: true });
+    
     try {
-      // Note: Since leaderboard needs all users, we created a custom route for it
-      const res = await fetch('/api/leaderboard');
-      const data = await res.json();
-      const error = null;
-        
+      const { data, error } = await supabase.from('leaderboard').select('*').order('total_xp', { ascending: false }).limit(100);
       if (error) throw error;
-      set({ entries: data || [] });
+      
+      const leaderboardData = data || [];
+      
+      // Fetch profiles manually because of lack of direct foreign key between leaderboard and profiles
+      const userIds = leaderboardData.map(e => e.user_id);
+      
+      let profilesData: any[] = [];
+      if (userIds.length > 0) {
+          const { data: pData, error: pError } = await supabase.from('profiles').select('id, full_name, college, avatar_url').in('id', userIds);
+          if (!pError && pData) {
+              profilesData = pData;
+          }
+      }
+      
+      const mergedEntries = leaderboardData.map((entry) => {
+         const profile = profilesData.find(p => p.id === entry.user_id);
+         return {
+            ...entry,
+            score: entry.total_xp, // Map total_xp to score
+            user: profile?.full_name || 'Anonymous',
+            college: profile?.college || '',
+            avatar_url: profile?.avatar_url || ''
+         };
+      });
+      
+      set({ entries: mergedEntries });
+      
       if (user) {
-        let myEntry = data?.find((e: any) => e.user_id === user.id) || null;
+        let myEntry = mergedEntries.find((e) => e.user_id === user.id) || null;
         if (!myEntry) {
            const newEntry = { user_id: user.id, total_xp: 0, coding_score: 0, interview_score: 0, mock_test_score: 0 };
-           const insErr = null;
-           await db.collection('leaderboard').insert(newEntry);
+           const { error: insErr } = await supabase.from('leaderboard').insert([newEntry]);
            if (!insErr) {
-             myEntry = newEntry;
-             data.push(myEntry);
-             data.sort((a, b) => (b.total_xp || 0) - (a.total_xp || 0));
-             set({ entries: data.slice(0, 100) });
-           } else {
-             console.error('Failed to create initial leaderboard entry:', insErr.message);
+             const emptyMerged = { ...newEntry, score: 0, user: user.name || 'Anonymous', college: '', avatar_url: '' };
+             mergedEntries.push(emptyMerged);
+             mergedEntries.sort((a, b) => (b.total_xp || 0) - (a.total_xp || 0));
+             set({ entries: mergedEntries.slice(0, 100), userEntry: emptyMerged });
            }
+        } else {
+           set({ userEntry: myEntry });
         }
-        set({ userEntry: myEntry });
       }
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
@@ -64,16 +91,13 @@ export const useLeaderboardStore = create<LeaderboardState>((set, get) => ({
   updateUserScore: async (updates) => {
     const user = useAuthStore.getState().user;
     if (!user) return;
-
     try {
-      let existing = await db.collection('leaderboard').findOne({ user_id: user.id });
-
+      let { data: existing } = await supabase.from('leaderboard').select('*').eq('user_id', user.id).maybeSingle();
       if (!existing) {
-        const insErr = null;
-        await db.collection('leaderboard').insert({ user_id: user.id, ...updates });
+        const { error: insErr } = await supabase.from('leaderboard').insert([{ user_id: user.id, ...updates }]);
         if (insErr) console.warn('Could not insert leaderboard:', insErr);
       } else {
-        await db.collection('leaderboard').update({ user_id: user.id }, updates);
+        await supabase.from('leaderboard').update(updates).eq('user_id', user.id);
       }
       get().fetchLeaderboard();
     } catch (error) {

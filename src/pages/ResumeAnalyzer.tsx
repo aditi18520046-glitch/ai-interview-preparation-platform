@@ -49,7 +49,8 @@ export default function ResumeAnalyzer() {
     if (!file) return;
     setIsAnalyzing(true);
     // Simulate AI processing
-    const url = await uploadResume(file);
+    const response = await uploadResume(file);
+    const url = response?.fileUrl;
     if (url) {
       await saveAnalysis({
         resume_url: url,

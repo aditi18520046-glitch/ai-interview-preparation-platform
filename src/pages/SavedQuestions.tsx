@@ -34,8 +34,8 @@ interface SavedQuestion {
 
 import { useSavedQuestionStore } from '../store/savedQuestionStore';
 export default function SavedQuestions() {
-  const { savedQuestions, fetchSaved, removeQuestion } = useSavedQuestionStore();
-  useEffect(() => { fetchSaved(); }, [fetchSaved]);
+  const { questions: savedQuestions, fetchQuestions, deleteQuestion } = useSavedQuestionStore();
+  useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
   
   // Always strictly empty as per instructions
    
@@ -46,11 +46,11 @@ export default function SavedQuestions() {
   // Derived stats (all 0 initially since questions are empty)
   const stats = {
     total: savedQuestions.length,
-    technical: savedQuestions.filter(q => q.category === 'Technical').length,
-    hr: savedQuestions.filter(q => q.category === 'HR').length,
-    behavioral: savedQuestions.filter(q => q.category === 'Behavioral').length,
-    coding: savedQuestions.filter(q => q.category === 'Coding').length,
-    systemDesign: savedQuestions.filter(q => q.category === 'System Design').length,
+    technical: savedQuestions.filter(q => q.question_type === 'Technical').length,
+    hr: savedQuestions.filter(q => q.question_type === 'HR').length,
+    behavioral: savedQuestions.filter(q => q.question_type === 'Behavioral').length,
+    coding: savedQuestions.filter(q => q.question_type === 'Coding').length,
+    systemDesign: savedQuestions.filter(q => q.question_type === 'System Design').length,
     companySpecific: savedQuestions.filter(q => q.company).length,
     recentlySaved: 0 // Logic to check recent dates would go here
   };
