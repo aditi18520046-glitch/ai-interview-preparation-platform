@@ -26,7 +26,7 @@ export default function CodingWorkspace({ onBack }: { onBack: () => void }) {
       question: 'Two Sum',
       submitted_code: code,
       runtime: 52,
-      memory: 42.1,
+      memory_usage: 42.1,
       passed_test_cases: 2,
       failed_test_cases: 0,
       score: 100

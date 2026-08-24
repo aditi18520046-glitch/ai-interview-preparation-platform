@@ -21,6 +21,9 @@ export interface CodingSubmission {
   runtime?: number;
   created_at?: string;
   company?: string;
+  memory_usage?: number;
+  passed_test_cases?: number;
+  failed_test_cases?: number;
 }
 
 interface CodingState {
