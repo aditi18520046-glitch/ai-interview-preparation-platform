@@ -40,7 +40,13 @@ export default function Login() {
         navigate('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Incorrect email or password. Please try again.');
+      if (error.message === 'Email not confirmed' || error.message.includes('Email not confirmed')) {
+        toast.error('Please check your email and confirm your account before logging in.');
+      } else if (error.message.includes('Invalid login credentials')) {
+        toast.error('Incorrect email or password. Please try again.');
+      } else {
+        toast.error(error.message || 'An error occurred during login. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

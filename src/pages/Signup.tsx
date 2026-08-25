@@ -61,7 +61,8 @@ export default function Signup() {
             college,
             branch,
             year,
-          }
+          },
+          emailRedirectTo: 'https://ai-interview-preparation-platform.netlify.app'
         }
       });
 
@@ -73,7 +74,7 @@ export default function Signup() {
         toast.success('Account created successfully');
         navigate('/dashboard');
       } else {
-        toast.success('Check your email to confirm your account');
+        toast.success('Account created successfully. Please check your email and confirm your email address before logging in.');
         setIsSuccess(true);
       }
     } catch (error: any) {

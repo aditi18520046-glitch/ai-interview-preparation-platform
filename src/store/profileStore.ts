@@ -35,22 +35,58 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     try {
       let { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
         
-      if (!data && !error) {
+      const userResp = await supabase.auth.getUser();
+      const user = userResp.data.user;
+
+      if (!data && !error && user) {
         // Attempt to create
-        const userResp = await supabase.auth.getUser();
-        const email = userResp.data.user?.email || '';
-        const name = userResp.data.user?.user_metadata?.full_name || '';
+        const email = user.email || '';
+        const name = user.user_metadata?.full_name || '';
+        const college = user.user_metadata?.college || '';
+        const branch = user.user_metadata?.branch || '';
+        const graduation_year = user.user_metadata?.year || '';
         
         const newProfile = {
             id: userId,
             full_name: name,
-            email: email
+            email: email,
+            college: college,
+            branch: branch,
+            graduation_year: graduation_year
         };
         const { error: insErr } = await supabase.from('profiles').insert([newProfile]);
         if (!insErr) {
             data = newProfile;
         } else {
             console.error('Failed to create profile:', insErr.message);
+        }
+      } else if (data && user) {
+        // Check if profile exists but is missing metadata fields, update them
+        let needsUpdate = false;
+        const updates: any = {};
+        
+        if (!data.college && user.user_metadata?.college) {
+            updates.college = user.user_metadata.college;
+            needsUpdate = true;
+        }
+        if (!data.branch && user.user_metadata?.branch) {
+            updates.branch = user.user_metadata.branch;
+            needsUpdate = true;
+        }
+        if (!data.graduation_year && user.user_metadata?.year) {
+            updates.graduation_year = user.user_metadata.year;
+            needsUpdate = true;
+        }
+        if (!data.full_name && user.user_metadata?.full_name) {
+            updates.full_name = user.user_metadata.full_name;
+            needsUpdate = true;
+        }
+        
+        if (needsUpdate) {
+            const { error: updErr } = await supabase.from('profiles').update(updates).eq('id', userId);
+            if (!updErr) {
+                data = { ...data, ...updates };
+            }
         }
       }
 
