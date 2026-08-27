@@ -40,6 +40,11 @@ export default function Login() {
         navigate('/dashboard');
       }
     } catch (error: any) {
+      console.error('Login error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
+      console.error('Error details:', error.details);
+
       if (error.message === 'Email not confirmed' || error.message.includes('Email not confirmed')) {
         toast.error('Please check your email and confirm your account before logging in.');
       } else if (error.message.includes('Invalid login credentials')) {

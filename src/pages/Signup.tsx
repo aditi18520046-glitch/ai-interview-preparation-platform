@@ -19,7 +19,6 @@ export default function Signup() {
   const [year, setYear] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   
   const [reqLength, setReqLength] = useState(false);
   const [reqUpper, setReqUpper] = useState(false);
@@ -52,6 +51,7 @@ export default function Signup() {
     setIsLoading(true);
     
     try {
+      // 1. Sign up using Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -61,23 +61,56 @@ export default function Signup() {
             college,
             branch,
             year,
-          },
-          emailRedirectTo: 'https://ai-interview-preparation-platform.netlify.app'
+          }
         }
       });
 
       if (error) {
+        console.error('Supabase Auth error:', error);
         throw error;
       }
 
-      if (data.session) {
+      if (data?.user) {
+        // 2. Fetch the actual authenticated session explicitly to ensure we have the user
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        const authUser = sessionData?.session?.user || data.user;
+
+        // 3. Insert the profile using the valid user ID
+        if (authUser?.id) {
+          const newProfile = {
+            id: authUser.id,
+            full_name: name,
+            email: email,
+            college: college,
+            branch: branch,
+            graduation_year: year
+          };
+
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert([newProfile], { onConflict: 'id' });
+
+          if (profileError) {
+            console.error('Error inserting profile:', profileError);
+            throw new Error(`Profile creation failed: ${profileError.message}`);
+          }
+        } else {
+           throw new Error('Authentication succeeded but user ID is missing.');
+        }
+
+        // 4. Redirect to dashboard
         toast.success('Account created successfully');
         navigate('/dashboard');
       } else {
-        toast.success('Account created successfully. Please check your email and confirm your email address before logging in.');
-        setIsSuccess(true);
+        throw new Error('Signup failed to return user data.');
       }
     } catch (error: any) {
+      console.error('Signup error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
+      console.error('Error details:', error.details);
+      console.error('Error hint:', error.hint);
       toast.error(error.message || 'Error creating account. Please try again.');
     } finally {
       setIsLoading(false);
@@ -143,21 +176,8 @@ export default function Signup() {
             </Link>
             <p className="text-slate-400 text-sm mb-8">Join us and start preparing today.</p>
 
-            {isSuccess ? (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 text-center">
-                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">Check your email</h3>
-                <p className="text-emerald-400 text-sm font-medium">
-                  We've sent a verification link to {email}. Please verify your email to continue.
-                </p>
-                <Link to="/login" className="mt-6 inline-block w-full bg-slate-800 hover:bg-slate-700 text-white rounded-xl py-3 font-semibold transition-colors">
-                  Go to Login
-                </Link>
-              </div>
-            ) : (
-            <>
-              <form onSubmit={handleSignup} className="space-y-5">
-                <div>
+            <form onSubmit={handleSignup} className="space-y-5">
+              <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5 ml-1">Full Name</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-400 transition-colors">
@@ -315,8 +335,6 @@ export default function Signup() {
                 </button>
               </p>
             </div>
-            </>
-            )}
           </motion.div>
         </div>
       </div>
