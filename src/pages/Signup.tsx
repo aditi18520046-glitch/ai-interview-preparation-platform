@@ -111,7 +111,12 @@ export default function Signup() {
       console.error('Error code:', error.code);
       console.error('Error details:', error.details);
       console.error('Error hint:', error.hint);
-      toast.error(error.message || 'Error creating account. Please try again.');
+      
+      if (error.message === 'Failed to fetch') {
+        toast.error('Network error: Could not connect to the database. Please verify your VITE_SUPABASE_URL in settings.');
+      } else {
+        toast.error(error.message || 'Error creating account. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

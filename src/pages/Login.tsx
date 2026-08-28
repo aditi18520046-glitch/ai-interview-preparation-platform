@@ -45,7 +45,9 @@ export default function Login() {
       console.error('Error code:', error.code);
       console.error('Error details:', error.details);
 
-      if (error.message === 'Email not confirmed' || error.message.includes('Email not confirmed')) {
+      if (error.message === 'Failed to fetch') {
+        toast.error('Network error: Could not connect to the database. Please verify your VITE_SUPABASE_URL in settings.');
+      } else if (error.message === 'Email not confirmed' || error.message.includes('Email not confirmed')) {
         toast.error('Please check your email and confirm your account before logging in.');
       } else if (error.message.includes('Invalid login credentials')) {
         toast.error('Incorrect email or password. Please try again.');

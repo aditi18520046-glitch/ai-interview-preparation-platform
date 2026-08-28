@@ -10,9 +10,19 @@ async function startServer() {
   app.use(express.json());
 
   // Use Gemini API
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  let ai: GoogleGenAI | null = null;
+  try {
+    if (process.env.GEMINI_API_KEY) {
+      ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    }
+  } catch (e) {
+    console.warn("Gemini API Key missing or invalid, AI features will be disabled.");
+  }
 
   app.post('/api/interview/chat', async (req, res) => {
+    if (!ai) {
+      return res.status(500).json({ error: "Gemini API is not configured on the server." });
+    }
     try {
       const { config, history, answer } = req.body;
       

@@ -1,0 +1,1 @@
+The root cause of "Failed to fetch" is an invalid Supabase URL in the user's AI Studio Secrets.
