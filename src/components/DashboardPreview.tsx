@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import heroImage from '../assets/images/hero_ai_platform_1787791594926.jpg';
 
 export default function DashboardPreview() {
   return (
@@ -19,7 +20,7 @@ export default function DashboardPreview() {
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent pointer-events-none"></div>
             
             <img 
-              src="/src/assets/images/hero_ai_platform_1787791594926.jpg" 
+              src={heroImage} 
               alt="AI Interview Dashboard Platform" 
               className="w-full h-auto rounded-xl md:rounded-2xl border border-white/5 relative z-10 object-cover shadow-2xl transition-transform duration-700 group-hover:scale-[1.01]"
             />
