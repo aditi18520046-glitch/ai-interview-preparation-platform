@@ -40,10 +40,9 @@ export default function Login() {
         navigate('/dashboard');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      console.error('Error message:', error.message);
-      console.error('Error code:', error.code);
-      console.error('Error details:', error.details);
+      if (error.message !== 'Invalid login credentials' && error.code !== 'invalid_credentials') {
+        console.error('Login error:', error.message);
+      }
 
       if (error.message === 'Failed to fetch') {
         toast.error('Network error: Could not connect to the database. Please verify your VITE_SUPABASE_URL in settings.');

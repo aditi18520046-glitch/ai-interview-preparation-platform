@@ -106,11 +106,9 @@ export default function Signup() {
         throw new Error('Signup failed to return user data.');
       }
     } catch (error: any) {
-      console.error('Signup error:', error);
-      console.error('Error message:', error.message);
-      console.error('Error code:', error.code);
-      console.error('Error details:', error.details);
-      console.error('Error hint:', error.hint);
+      if (error.code !== 'user_already_exists' && error.code !== 'invalid_credentials') {
+        console.error('Signup error:', error.message);
+      }
       
       if (error.message === 'Failed to fetch') {
         toast.error('Network error: Could not connect to the database. Please verify your VITE_SUPABASE_URL in settings.');

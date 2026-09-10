@@ -146,7 +146,6 @@ export default function TopNav({ onMobileMenuClick, onToggleSidebar, isSidebarCo
             >
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors leading-tight">{userName}</p>
-                <p className="text-[11px] text-slate-400">Free Plan</p>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-[2px] shadow-sm shadow-indigo-500/20 shrink-0">
