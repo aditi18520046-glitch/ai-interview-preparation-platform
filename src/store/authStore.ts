@@ -13,7 +13,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   login: (user) => set({ user, isAuthenticated: true }),
-  logout: () => {
+  logout: async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error('Error signing out', e);
+    }
     useProfileStore.setState({ profile: null });
     set({ user: null, isAuthenticated: false });
   },

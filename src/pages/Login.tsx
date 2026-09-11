@@ -40,16 +40,8 @@ export default function Login() {
         navigate('/dashboard');
       }
     } catch (error: any) {
-      if (error.message !== 'Invalid login credentials' && error.code !== 'invalid_credentials') {
-        console.error('Login error:', error.message);
-      }
-
       if (error.message === 'Failed to fetch') {
         toast.error('Network error: Could not connect to the database. Please verify your VITE_SUPABASE_URL in settings.');
-      } else if (error.message === 'Email not confirmed' || error.message.includes('Email not confirmed')) {
-        toast.error('Please check your email and confirm your account before logging in.');
-      } else if (error.message.includes('Invalid login credentials')) {
-        toast.error('Incorrect email or password. Please try again.');
       } else {
         toast.error(error.message || 'An error occurred during login. Please try again.');
       }

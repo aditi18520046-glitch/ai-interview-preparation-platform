@@ -43,10 +43,6 @@ export default function Signup() {
       toast.error('Please fill in all fields');
       return;
     }
-    if (!isPasswordValid) {
-      toast.error('Please meet all password requirements');
-      return;
-    }
     
     setIsLoading(true);
     
@@ -66,37 +62,32 @@ export default function Signup() {
       });
 
       if (error) {
-        console.error('Supabase Auth error:', error);
         throw error;
       }
 
       if (data?.user) {
-        // 2. Fetch the actual authenticated session explicitly to ensure we have the user
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        const authUser = sessionData?.session?.user || data.user;
+        // 2. We need an active session to insert into the profiles table due to Row Level Security.
+        // If data.session is null, it means Supabase requires email confirmation.
+        if (!data.session) {
+          throw new Error("Signup successful, but email confirmation is required by your Supabase settings. Please disable 'Confirm email' in Supabase Auth providers to allow immediate login, or check your email.");
+        }
 
         // 3. Insert the profile using the valid user ID
-        if (authUser?.id) {
-          const newProfile = {
-            id: authUser.id,
-            full_name: name,
-            email: email,
-            college: college,
-            branch: branch,
-            graduation_year: year
-          };
+        const newProfile = {
+          id: data.user.id,
+          full_name: name,
+          email: email,
+          college: college,
+          branch: branch,
+          graduation_year: year
+        };
 
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert([newProfile], { onConflict: 'id' });
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert([newProfile], { onConflict: 'id' });
 
-          if (profileError) {
-            console.error('Error inserting profile:', profileError);
-            throw new Error(`Profile creation failed: ${profileError.message}`);
-          }
-        } else {
-           throw new Error('Authentication succeeded but user ID is missing.');
+        if (profileError) {
+          throw new Error(`Profile creation failed: ${profileError.message}`);
         }
 
         // 4. Redirect to dashboard
@@ -106,10 +97,6 @@ export default function Signup() {
         throw new Error('Signup failed to return user data.');
       }
     } catch (error: any) {
-      if (error.code !== 'user_already_exists' && error.code !== 'invalid_credentials') {
-        console.error('Signup error:', error.message);
-      }
-      
       if (error.message === 'Failed to fetch') {
         toast.error('Network error: Could not connect to the database. Please verify your VITE_SUPABASE_URL in settings.');
       } else {
