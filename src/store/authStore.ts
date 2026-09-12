@@ -9,15 +9,17 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   login: (user) => set({ user, isAuthenticated: true }),
   logout: async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.error('Error signing out', e);
+    if (get().isAuthenticated) {
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.error('Error signing out', e);
+      }
     }
     useProfileStore.setState({ profile: null });
     set({ user: null, isAuthenticated: false });
@@ -34,6 +36,8 @@ supabase.auth.onAuthStateChange((event, session) => {
     });
     useProfileStore.getState().fetchProfile(session.user.id);
   } else {
-    useAuthStore.getState().logout();
+    if (useAuthStore.getState().isAuthenticated) {
+      useAuthStore.getState().logout();
+    }
   }
 });
