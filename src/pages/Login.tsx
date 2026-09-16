@@ -5,11 +5,9 @@ import { User, Lock, Eye, EyeOff, Loader2, Mail, Github } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Navbar from '../components/Navbar';
 import { supabase } from '../lib/supabase';
-import { useAuthStore } from '../store/authStore';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,18 +24,27 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        throw error;
+      if (signInError) {
+        throw signInError;
       }
 
-      if (data.user) {
+      // Obtain session explicitly
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      if (session?.user) {
         toast.success('Logged in successfully');
         navigate('/dashboard');
+      } else {
+        throw new Error("Login succeeded but failed to obtain a session.");
       }
     } catch (error: any) {
       if (error.message === 'Failed to fetch') {

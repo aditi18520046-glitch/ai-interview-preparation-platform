@@ -5,11 +5,9 @@ import { User, Lock, Eye, EyeOff, Loader2, Mail, CheckCircle2, XCircle, Graduati
 import { toast } from 'react-hot-toast';
 import Navbar from '../components/Navbar';
 import { supabase } from '../lib/supabase';
-import { useAuthStore } from '../store/authStore';
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -35,7 +33,6 @@ export default function Signup() {
   }, [password]);
 
   const passwordStrength = [reqLength, reqUpper, reqLower, reqNumber, reqSpecial].filter(Boolean).length;
-  const isPasswordValid = passwordStrength === 5;
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +45,7 @@ export default function Signup() {
     
     try {
       // 1. Sign up using Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -56,25 +53,26 @@ export default function Signup() {
             full_name: name,
             college,
             branch,
-            year,
+            graduation_year: year,
           }
         }
       });
 
-      if (error) {
-        throw error;
+      if (signUpError) {
+        throw signUpError;
       }
 
-      if (data?.user) {
-        // 2. We need an active session to insert into the profiles table due to Row Level Security.
-        // If data.session is null, it means Supabase requires email confirmation.
-        if (!data.session) {
-          throw new Error("Signup successful, but email confirmation is required by your Supabase settings. Please disable 'Confirm email' in Supabase Auth providers to allow immediate login, or check your email.");
-        }
+      // 2. Obtain session explicitly
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        // 3. Insert the profile using the valid user ID
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      if (session?.user) {
+        // 3. Insert the profile using the authenticated user's ID
         const newProfile = {
-          id: data.user.id,
+          id: session.user.id,
           full_name: name,
           email: email,
           college: college,
@@ -94,7 +92,7 @@ export default function Signup() {
         toast.success('Account created successfully');
         navigate('/dashboard');
       } else {
-        throw new Error('Signup failed to return user data.');
+        throw new Error("Signup successful, but unable to obtain session. Please check your Supabase 'Confirm email' settings.");
       }
     } catch (error: any) {
       if (error.message === 'Failed to fetch') {
